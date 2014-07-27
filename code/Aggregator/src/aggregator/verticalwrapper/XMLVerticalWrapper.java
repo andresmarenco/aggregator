@@ -25,6 +25,8 @@ import aggregator.verticalwrapper.srr.XMLSRRScript;
 
 public class XMLVerticalWrapper extends AbstractVerticalWrapper {
 	
+	private XMLUtils xmlUtils;
+	
 	/**
 	 * Default Constructor
 	 * @param vertical Vertical Object
@@ -32,6 +34,8 @@ public class XMLVerticalWrapper extends AbstractVerticalWrapper {
 	 */
 	public XMLVerticalWrapper(Vertical vertical, VerticalConfig config) {
 		super(vertical, config);
+		
+		this.xmlUtils = new XMLUtils();
 	}
 	
 	
@@ -70,7 +74,7 @@ public class XMLVerticalWrapper extends AbstractVerticalWrapper {
 		Document authData = authenticate();
 		
 		String expression = StringUtils.replace(config.getIdPattern(), "{%ID}", document.getId());
-		Node node = XMLUtils.executeXPath(authData, expression, Node.class);
+		Node node = xmlUtils.executeXPath(authData, expression, Node.class);
 		
 		try
 		{

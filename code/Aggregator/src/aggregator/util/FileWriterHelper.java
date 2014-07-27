@@ -1,27 +1,29 @@
 package aggregator.util;
 
 import java.io.BufferedWriter;
-import java.io.File;
+import java.io.Closeable;
 import java.io.FileWriter;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-public class FileWriterHelper {
+public class FileWriterHelper implements Closeable {
 	
 	private Log log = LogFactory.getLog(FileWriterHelper.class);
 	
-	private final String filename;
+	private final Path filePath;
 	private FileWriter fileWriter;
 	private BufferedWriter bufferedWriter;
 	
 	
 	/**
 	 * Default Constructor
-	 * @param filename Name of the output file
+	 * @param filePath Path of the output file
 	 */
-	public FileWriterHelper(String filename) {
-		this.filename = filename;
+	public FileWriterHelper(Path filePath) {
+		this.filePath = filePath;
 	}
 	
 	
@@ -34,12 +36,8 @@ public class FileWriterHelper {
 	public void open(boolean append) {
 		try
 		{
-			if(filename.contains(File.separator)) {
-				String path = filename.substring(0, filename.lastIndexOf(File.separator));
-				new File(path).mkdirs();
-			}
-			
-			fileWriter = new FileWriter(filename, append);
+			Files.createDirectories(filePath.getParent());
+			fileWriter = new FileWriter(filePath.toFile(), append);
 			bufferedWriter = new BufferedWriter(fileWriter);
 		}
 		catch(Exception ex) {

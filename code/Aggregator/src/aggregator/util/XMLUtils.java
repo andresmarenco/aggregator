@@ -16,11 +16,22 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
+import org.w3c.dom.Text;
 
 public class XMLUtils {
 	
 	private static final Log log = LogFactory.getLog(XMLUtils.class);
-	private static final XPath xpath = XPathFactory.newInstance().newXPath();
+	private XPath xpath;
+	
+	
+	/**
+	 * Default Constructor
+	 */
+	public XMLUtils() {
+		this.xpath = XPathFactory.newInstance().newXPath();
+	}
+	
+	
 	
 	
 	/**
@@ -31,7 +42,7 @@ public class XMLUtils {
 	 * @return Result of the expression
 	 */
 	@SuppressWarnings("unchecked")
-	public static <T> T executeXPath(Object item, String expression, Class<T> returnType) {
+	public <T> T executeXPath(Object item, String expression, Class<T> returnType) {
 		T result = null;
 		
 		try
@@ -71,11 +82,11 @@ public class XMLUtils {
 	
 	/**
 	 * Serializes a DOM
-	 * @param document Document to serialize
+	 * @param node Node to serialize
 	 * @return String representing the XML document
 	 */
-	public static String serializeDOM(Document document) {
-		return serializeDOM(document, false, false);
+	public static String serializeDOM(Node node) {
+		return serializeDOM(node, false, false);
 	}
 	
 	
@@ -83,20 +94,25 @@ public class XMLUtils {
 	
 	/**
 	 * Serializes a DOM
-	 * @param document Document to serialize
+	 * @param node Node to serialize
 	 * @param compactFormat Print in compact format
 	 * @param omitDeclaration Omit XML declaration
 	 * @return String representing the XML document
 	 */
-	public static String serializeDOM(Document document, boolean compactFormat, boolean omitDeclaration) {
+	public static String serializeDOM(Node node, boolean compactFormat, boolean omitDeclaration) {
 		String result = null;
 		try
 		{
-			org.jdom2.Document jdomDocument = new DOMBuilder().build(document);
-			
 			Format format = (compactFormat) ? Format.getCompactFormat() : Format.getPrettyFormat();
 			XMLOutputter out = new XMLOutputter(format.setOmitDeclaration(omitDeclaration));
-			result = out.outputString(jdomDocument).replaceAll("$\\s+", "");
+			
+			if(node instanceof Document) {
+				result = out.outputString(new DOMBuilder().build((Document)node));
+			} else if(node instanceof Element) {
+				result = out.outputString(new DOMBuilder().build((Element)node));
+			} else if(node instanceof Text) {
+				result = out.outputString(new DOMBuilder().build((Text)node));
+			}
 		}
 		catch(Exception ex) {
 			log.error(ex.getMessage(), ex);
@@ -105,31 +121,4 @@ public class XMLUtils {
 		return result;
 	}
 	
-	
-	
-	
-	/**
-	 * Serializes a DOM
-	 * @param element Element to serialize
-	 * @param compactFormat Print in compact format
-	 * @param omitDeclaration Omit XML declaration
-	 * @return String representing the XML document
-	 */
-	public static String serializeDOM(Element element, boolean compactFormat, boolean omitDeclaration) {
-		String result = null;
-		try
-		{
-			org.jdom2.Element jdomElement = new DOMBuilder().build(element);
-			
-			Format format = (compactFormat) ? Format.getCompactFormat() : Format.getPrettyFormat();
-			XMLOutputter out = new XMLOutputter(format.setOmitDeclaration(omitDeclaration));
-			result = out.outputString(jdomElement).replaceAll("$\\s+", "");
-		}
-		catch(Exception ex) {
-			log.error(ex.getMessage(), ex);
-		}
-		
-		return result;
-	}
-
 }

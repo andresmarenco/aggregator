@@ -1,8 +1,10 @@
 package aggregator.util;
 
-import java.io.BufferedReader;
-import java.io.FileReader;
+import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.FileSystems;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.List;
@@ -10,10 +12,87 @@ import java.util.List;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.joda.time.LocalDateTime;
 
 public class CommonUtils {
 
+	private static final String HOME_PATH_KEY = "aggregator.homePath";
+	private static final String VERTICALS_PATH_KEY = "aggregator.verticalsPath";
+	private static final String LOG_PATH_KEY = "aggregator.logPath";
+	private static final String INDEX_PATH_KEY = "aggregator.indexPath";
+	private static final String SAMPLE_PATH_KEY = "aggregator.samplePath";
+	private static final String TIMESTAMP_PATTERN_KEY = "aggregator.timeStampPattern";
 	private static Log log = LogFactory.getLog(CommonUtils.class);
+
+	/**
+	 * Gets the current timestamp based on the configured pattern
+	 * @return Current timestamp
+	 */
+	public static final String getTimestampString() {
+		return LocalDateTime.now().toString(System.getProperty(CommonUtils.TIMESTAMP_PATTERN_KEY, "yyyyMMddhhmmss"));
+	}
+	
+	
+	
+	
+	/**
+	 * Gets the configured home path (and creates it if needed)
+	 * @return Home path
+	 * @throws IOException
+	 */
+	public static final Path getHomePath() throws IOException {
+		return Files.createDirectories(FileSystems.getDefault().getPath(System.getProperty(HOME_PATH_KEY)));
+	}
+	
+	
+	
+	
+	/**
+	 * Gets the configured vertical path based on the home path (and creates it if needed)
+	 * @return Vertical path
+	 * @throws IOException
+	 */
+	public static final Path getVerticalsPath() throws IOException {
+		return Files.createDirectories(getHomePath().resolve(System.getProperty(VERTICALS_PATH_KEY)));
+	}
+	
+	
+	
+	
+	/**
+	 * Gets the configured log path based on the home path (and creates it if needed)
+	 * @return Log path
+	 * @throws IOException
+	 */
+	public static final Path getLogPath() throws IOException {
+		return Files.createDirectories(getHomePath().resolve(System.getProperty(LOG_PATH_KEY)));
+	}
+	
+	
+	
+	
+	/**
+	 * Gets the configured index path based on the home path (and creates it if needed)
+	 * @return Index path
+	 * @throws IOException
+	 */
+	public static final Path getIndexPath() throws IOException {
+		return Files.createDirectories(getHomePath().resolve(System.getProperty(INDEX_PATH_KEY)));
+	}
+	
+	
+	
+	
+	/**
+	 * Gets the configured sample path based on the home path (and creates it if needed)
+	 * @return Sample path
+	 * @throws IOException
+	 */
+	public static final Path getSamplePath() throws IOException {
+		return Files.createDirectories(getHomePath().resolve(System.getProperty(SAMPLE_PATH_KEY)));
+	}
+	
+	
 	
 	
 	/**
@@ -59,18 +138,19 @@ public class CommonUtils {
 
 	/**
 	 * Reads an script file
-	 * @param filename File name
+	 * @param scriptFile Script file
 	 * @return List with script lines 
 	 */
-	public static List<String> readScriptFile(String filename) {
+	public static List<String> readScriptFile(Path scriptFile, String... extraPaths) {
 		List<String> script = new ArrayList<String>();
-		if(StringUtils.isNotBlank(filename)) {
-			try(BufferedReader br = new BufferedReader(new FileReader(filename))) {
-				String line = br.readLine();
-				while(line != null) {
-					script.add(line);
-					line = br.readLine();
-				}
+		for(String path : extraPaths) {
+			scriptFile = scriptFile.resolve(path);
+		}
+		
+		if((Files.exists(scriptFile)) && (Files.isRegularFile(scriptFile))) {
+			try
+			{
+				script = Files.readAllLines(scriptFile);
 			}
 			catch(Exception ex) {
 				log.error(ex.getMessage(), ex);
@@ -134,16 +214,18 @@ public class CommonUtils {
 	 */
 	public static final <T> Class<? extends T> getSubClassType(Class<T> superclass, String className) {
 		Class<?> result = null;
-		String packageName = superclass.getPackage().getName();
-		try
-		{
-			result = Class.forName(MessageFormat.format("{0}.{1}", packageName, className));
-			if(!superclass.isAssignableFrom(result)) {
-				log.error(MessageFormat.format("{0} is not a sub class of {1}", className, superclass.getName()));
+		if(StringUtils.isNotBlank(className)) {
+			String packageName = superclass.getPackage().getName();
+			try
+			{
+				result = Class.forName(MessageFormat.format("{0}.{1}", packageName, className));
+				if(!superclass.isAssignableFrom(result)) {
+					log.error(MessageFormat.format("{0} is not a sub class of {1}", className, superclass.getName()));
+				}
 			}
-		}
-		catch(Exception ex) {
-			log.error(MessageFormat.format("{0} not found", className), ex);
+			catch(Exception ex) {
+				log.error(MessageFormat.format("{0} not found", className), ex);
+			}
 		}
 		return result.asSubclass(superclass);
 	}

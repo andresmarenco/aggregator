@@ -1,6 +1,7 @@
 package aggregator.beans;
 
 import java.io.Serializable;
+import java.nio.file.Path;
 
 public interface SampledDocument<T> extends Serializable {
 	
@@ -34,5 +35,11 @@ public interface SampledDocument<T> extends Serializable {
 	 * @return Raw document
 	 */
 	public T getDocument();
+	
+	/**
+	 * Reads the document from the given path
+	 * @param path Document path
+	 */
+	public void readFromFile(Path path);
 	
 }

@@ -2,6 +2,7 @@ package aggregator.verticalwrapper;
 
 import java.io.FileInputStream;
 import java.io.InputStream;
+import java.nio.file.Path;
 import java.text.MessageFormat;
 import java.util.Properties;
 
@@ -15,13 +16,13 @@ import aggregator.util.LRUMap;
 
 public class VerticalWrapperController {
 	
-	public static final String CONFIG_PATH_KEY = "aggregator.verticalWrapper.configPath";
+	//public static final String CONFIG_PATH_KEY = "aggregator.verticalWrapper.configPath";
 	public static final String CACHE_SIZE_KEY = "aggregator.verticalWrapper.cacheSize";
 	
 	/** Current instance of the class for the Singleton Pattern */
 	private static VerticalWrapperController _ClassInstance;
 	
-	private String configPath;
+	private Path configPath;
 	private int cacheSize;
 	private LRUMap<Vertical, VerticalConfig> verticalData;
 	private Log log = LogFactory.getLog(VerticalWrapperController.class);
@@ -77,10 +78,16 @@ public class VerticalWrapperController {
 	 * Initializes the local variables with the specified properties
 	 */
 	private void init() {
-		this.configPath = System.getProperty(CONFIG_PATH_KEY);
 		this.cacheSize = Math.max(1, Integer.parseInt(System.getProperty(CACHE_SIZE_KEY, "1")));
-		
 		this.verticalData = new LRUMap<Vertical, VerticalConfig>(cacheSize);
+		
+		try
+		{
+			this.configPath = CommonUtils.getVerticalsPath();
+		}
+		catch(Exception ex) {
+			log.error(ex.getMessage(), ex);
+		}
 	}
 	
 	
@@ -95,11 +102,9 @@ public class VerticalWrapperController {
 		AbstractVerticalWrapper result = null;
 		VerticalConfig config = this.getVerticalConfig(vertical);
 		if(config != null) {
-			Class<?> wrapperClass = CommonUtils.getSubClassType(AbstractVerticalWrapper.class, config.getWrapperType());
-			
-			if(wrapperClass.equals(XMLVerticalWrapper.class)) {
+			if(config.getWrapperType().equals(XMLVerticalWrapper.class)) {
 				result = new XMLVerticalWrapper(vertical, config);
-			} else if(wrapperClass.equals(HTTPVerticalWrapper.class)) {
+			} else if(config.getWrapperType().equals(HTTPVerticalWrapper.class)) {
 				result = new HTTPVerticalWrapper(vertical, config);
 			} else {
 				throw new NoClassDefFoundError(MessageFormat.format("Undefined wrapper for {0} vertical", vertical.getName()));
@@ -124,7 +129,8 @@ public class VerticalWrapperController {
 			InputStream input = null;
 			try
 			{
-				input = new FileInputStream(MessageFormat.format("{0}{1}.conf", configPath, vertical.getId()));
+				Path configFile = this.configPath.resolve(MessageFormat.format("{0}.conf", vertical.getId()));
+				input = new FileInputStream(configFile.toFile());
 				
 				Properties properties = new Properties();
 				properties.load(input);

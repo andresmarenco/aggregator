@@ -38,7 +38,8 @@ import org.htmlcleaner.HtmlCleaner;
 import org.htmlcleaner.TagNode;
 import org.w3c.dom.Document;
 
-import aggregator.beans.HTTPVerticalConfig;
+import aggregator.beans.HTTPWrapperConfig;
+import aggregator.beans.WrapperConfig;
 import aggregator.util.HTTPUtils;
 
 public class HTTPQueryScript implements QueryScript<Document> {
@@ -51,7 +52,7 @@ public class HTTPQueryScript implements QueryScript<Document> {
 	private RequestConfig requestConfig;
 	private CloseableHttpClient httpClient;
 	private URIBuilder uriBuilder;
-	private HTTPVerticalConfig verticalConfig;
+	private HTTPWrapperConfig verticalConfig;
 	private Document responseDocument;
 	private List<NameValuePair> params;
 	private Log log = LogFactory.getLog(HTTPQueryScript.class);
@@ -60,9 +61,13 @@ public class HTTPQueryScript implements QueryScript<Document> {
 	 * Default Constructor
 	 * @param httpContext HTTP Context
 	 */
-	public HTTPQueryScript(HttpClientContext httpContext, HTTPVerticalConfig verticalConfig) {
+	public HTTPQueryScript(HttpClientContext httpContext, WrapperConfig verticalConfig) {
 		this.httpContext = httpContext;
-		this.verticalConfig = verticalConfig;
+		if(verticalConfig.getClass() == HTTPWrapperConfig.class) {
+			this.verticalConfig = (HTTPWrapperConfig) verticalConfig;
+		} else {
+			log.error("Wrong class type for Wrapper Config");
+		}
 	}
 	
 	

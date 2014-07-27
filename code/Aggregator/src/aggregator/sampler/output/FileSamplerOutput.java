@@ -1,20 +1,20 @@
 package aggregator.sampler.output;
 
+import java.nio.file.Path;
+
 import org.apache.commons.lang3.StringUtils;
-import org.joda.time.LocalDateTime;
 
 import aggregator.beans.SampledDocument;
 import aggregator.beans.Vertical;
-import aggregator.sampler.AbstractSampler;
+import aggregator.util.CommonUtils;
 import aggregator.util.FileWriterHelper;
 
 public class FileSamplerOutput extends AbstractSamplerOutput {
 	
 	public static final String SEPARATE_FILES_KEY = "aggregator.sampler.fileSampler.separateFiles";
 	public static final String FILE_PATTERN_KEY = "aggregator.sampler.fileSampler.filePattern";
-	public static final String OUTPUT_PATH_KEY = "aggregator.sampler.fileSampler.outputPath";
 	
-	private String outputPath;
+	private Path outputPath;
 	private String filePattern;
 	private boolean separateFiles;
 	private long fileCounter;
@@ -37,9 +37,16 @@ public class FileSamplerOutput extends AbstractSamplerOutput {
 	 * Initializes the local variables with the specified properties
 	 */
 	private void init() {
-		this.outputPath = System.getProperty(OUTPUT_PATH_KEY);
 		this.filePattern = System.getProperty(FILE_PATTERN_KEY);
 		this.separateFiles = Boolean.parseBoolean(System.getProperty(SEPARATE_FILES_KEY, "true"));
+		
+		try
+		{
+			this.outputPath = CommonUtils.getSamplePath();
+		}
+		catch(Exception ex) {
+			log.error(ex.getMessage(), ex);
+		}
 	}
 
 
@@ -58,7 +65,7 @@ public class FileSamplerOutput extends AbstractSamplerOutput {
 
 
 	@Override
-	public void openResources() {
+	public void open() {
 		if(!separateFiles) {
 			openFile(null);
 		}
@@ -66,7 +73,7 @@ public class FileSamplerOutput extends AbstractSamplerOutput {
 
 
 	@Override
-	public void closeResources() {
+	public void close() {
 		if(!separateFiles) {
 			closeFile();
 		}
@@ -83,9 +90,10 @@ public class FileSamplerOutput extends AbstractSamplerOutput {
 		String filename = filePattern.replace("{vertical}", vertical.getId())
 				.replace("{docid}", (documentId != null ? documentId : ""))
 				.replace("{count}", StringUtils.leftPad(String.valueOf(fileCounter++), 6, '0'))
-				.replace("{timestamp}", LocalDateTime.now().toString(System.getProperty(AbstractSampler.TIMESTAMP_PATTERN_KEY, "yyyyMMddhhmmss")));
+				.replace("{timestamp}", CommonUtils.getTimestampString());
 		
-		fileWriter = new FileWriterHelper(outputPath + filename);
+		Path filePath = this.outputPath.resolve(filename);
+		fileWriter = new FileWriterHelper(filePath);
 		fileWriter.open(false);
 	}
 	

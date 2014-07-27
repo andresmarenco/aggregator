@@ -43,6 +43,7 @@ public class HTTPVerticalWrapper extends AbstractVerticalWrapper {
 		super(vertical, config);
 		
 		this.cleanerProperties = new CleanerProperties();
+		this.cleanerProperties.setOmitDoctypeDeclaration(true);
 		this.htmlCleaner = new HtmlCleaner(cleanerProperties);
 		this.domSerializer = new DomSerializer(cleanerProperties);
 	}
@@ -62,7 +63,7 @@ public class HTTPVerticalWrapper extends AbstractVerticalWrapper {
 		List<QueryResult> result = new ArrayList<QueryResult>();
 		HttpClientContext httpContext = this.authenticate();
 		
-		QueryScript<Document> queryScript = new HTTPQueryScript(httpContext, config.getHttpConfig());
+		QueryScript<Document> queryScript = new HTTPQueryScript(httpContext, config.getWrapperConfig());
 		SRRScript<Document> srrScript = new HTTPSRRScript(vertical);
 		
 		Document queryResult = queryScript.execute(query, config.getQueryScript());

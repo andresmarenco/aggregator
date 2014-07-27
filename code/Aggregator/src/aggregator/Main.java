@@ -7,8 +7,10 @@ import java.io.FileInputStream;
 import java.io.FileReader;
 import java.io.InputStreamReader;
 import java.io.StringReader;
+import java.nio.file.FileSystems;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -17,6 +19,22 @@ import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathFactory;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.lucene.analysis.Analyzer;
+import org.apache.lucene.analysis.TokenStream;
+import org.apache.lucene.analysis.standard.StandardAnalyzer;
+import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
+import org.apache.lucene.document.Field;
+import org.apache.lucene.document.TextField;
+import org.apache.lucene.index.DirectoryReader;
+import org.apache.lucene.index.IndexWriter;
+import org.apache.lucene.index.IndexWriterConfig;
+import org.apache.lucene.queryparser.classic.QueryParser;
+import org.apache.lucene.search.IndexSearcher;
+import org.apache.lucene.search.Query;
+import org.apache.lucene.search.ScoreDoc;
+import org.apache.lucene.store.Directory;
+import org.apache.lucene.store.RAMDirectory;
+import org.apache.lucene.util.Version;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -26,12 +44,14 @@ import org.xml.sax.InputSource;
 import aggregator.beans.QueryResult;
 import aggregator.beans.SampledDocument;
 import aggregator.beans.Vertical;
+import aggregator.beans.XMLSampledDocument;
 import aggregator.dataaccess.ConnectionManager;
 import aggregator.dataaccess.DirectConnectionManager;
 import aggregator.dataaccess.VerticalDAO;
 import aggregator.sampler.output.FileSamplerOutput;
 import aggregator.sampler.output.AbstractSamplerOutput;
-import aggregator.sampler.output.SamplerOutputController;
+import aggregator.sampler.parser.HTMLSamplerParser;
+import aggregator.sampler.parser.SamplerParser;
 import aggregator.util.CommonUtils;
 import aggregator.util.IterableNodeList;
 import aggregator.util.XMLUtils;
@@ -179,6 +199,7 @@ public class Main {
 			
 //			System.out.println(r);
 			
+			
 //			
 ////			System.out.println(XMLUtils.serializeDOM(doc));
 //			NodeList list = (NodeList) xpe.evaluate(doc, XPathConstants.NODESET);
@@ -237,21 +258,20 @@ public class Main {
 			
 			
 			VerticalDAO dao = new VerticalDAO(DirectConnectionManager.getInstance());
-			Vertical vertical = dao.loadVertical("ccsb");
+			Vertical vertical = dao.loadVertical("arxiv");
 
-			SamplerOutputController soc = new SamplerOutputController();
-			AbstractSamplerOutput output = soc.newSamplerOutput(vertical);
+			AbstractSamplerOutput aso = AbstractSamplerOutput.newSamplerOutput(vertical);
 			
 			
 			VerticalWrapperController wc = VerticalWrapperController.getInstance();
 			AbstractVerticalWrapper wrapper = wc.createVerticalWrapper(vertical);
-			List<QueryResult> result = wrapper.executeQuery("xpath");
+			List<QueryResult> result = wrapper.executeQuery("math");
 			
-			output.openResources();
-			
-//			SampledDocument<?> doc = wrapper.downloadDocument(result.get(0));
-//			System.out.println(doc.serialize());
-			
+			aso.open();
+//			
+////			SampledDocument<?> doc = wrapper.downloadDocument(result.get(0));
+////			System.out.println(doc.serialize());
+//			
 			System.out.println("RESULTS!!");
 			for(QueryResult r : result) {
 				System.out.println("\n\nID: " + r.getId());
@@ -270,12 +290,12 @@ public class Main {
 					System.out.println(a);
 				}
 			
-//				output.outputDocument(wrapper.downloadDocument(r));
-//				break;
+				aso.outputDocument(wrapper.downloadDocument(r));
+				break;
 			}
 			
 			
-			output.closeResources();
+			aso.close();
 			
 			
 			
@@ -283,6 +303,60 @@ public class Main {
 //			
 //			System.out.println(XMLUtils.serializeDOM(doc));
 //			
+			
+//			VerticalDAO dao = new VerticalDAO(DirectConnectionManager.getInstance());
+//			Vertical vertical = dao.loadVertical("arxiv");
+//			
+//			VerticalWrapperController wc = VerticalWrapperController.getInstance();
+//			AbstractVerticalWrapper wrapper = wc.createVerticalWrapper(vertical);
+			
+//			SampledDocument<?> xml = new XMLSampledDocument(FileSystems.getDefault().getPath("/home/andres/sample/arxiv/000000_20140723055053.html"));
+//			SamplerParser sp = wc.getVerticalConfig(vertical).newIndexParserInstance();
+//			
+//			for(Map.Entry<String, String> pair : sp.parseDocument(xml)) {
+//				System.out.println(pair.getKey() + ":  " + pair.getValue());
+//			}
+//			
+//			Analyzer analyzer = new StandardAnalyzer(Version.LUCENE_4_9);
+//			Directory directory = new RAMDirectory();
+//			
+//			String text = "This is the text to be indexed.";
+//			
+//			TokenStream stream  = analyzer.tokenStream(null, new StringReader(text));
+//		    stream.reset();
+//		    while (stream.incrementToken()) {
+//		    	
+//		    	System.out.println(stream.getAttribute(CharTermAttribute.class).toString());
+//		    }
+//			
+//			IndexWriterConfig config = new IndexWriterConfig(Version.LUCENE_4_9, analyzer);
+//		    IndexWriter iwriter = new IndexWriter(directory, config);
+//		    
+//		    org.apache.lucene.document.Document doc = new org.apache.lucene.document.Document();
+//		    doc.
+		    
+//		    
+//		    doc.add(new Field("fieldname", text, TextField.TYPE_STORED));
+//		    iwriter.addDocument(doc);
+//		    iwriter.close();
+			    
+		    // Now search the index:
+//		    DirectoryReader ireader = DirectoryReader.open(directory);
+//		    IndexSearcher isearcher = new IndexSearcher(ireader);
+////		    // Parse a simple query that searches for "text":
+//		    QueryParser parser = new QueryParser(Version.LUCENE_4_9, "fieldname", analyzer);
+//		    Query query = parser.parse("indexed");
+//		    ScoreDoc[] hits = isearcher.search(query, null, 1000).scoreDocs;
+////		    assertEquals(1, hits.length);
+//		    System.out.println("TOTAL: " + hits.length);
+//		    // Iterate through the results:
+//		    for (int i = 0; i < hits.length; i++) {
+//		    	 org.apache.lucene.document.Document hitDoc = isearcher.doc(hits[i].doc);
+//		    	 System.out.println("This is the text to be indexed. " + hitDoc.get("fieldname"));
+////		      assertEquals("This is the text to be indexed.", hitDoc.get("fieldname"));
+//		    }
+//		    ireader.close();
+//		    directory.close();
 			
 		}
 		catch(Exception ex) {

@@ -3,7 +3,7 @@ package aggregator.beans;
 import java.io.Serializable;
 import java.util.Properties;
 
-public class HTTPVerticalConfig implements Serializable {
+public class HTTPWrapperConfig implements WrapperConfig, Serializable {
 
 	private static final long serialVersionUID = 201407172115L;
 	private static final String HTTP_COOKIE_POLICY_KEY = "http.cookiePolicy";
@@ -17,7 +17,7 @@ public class HTTPVerticalConfig implements Serializable {
 	/**
 	 * Default Constructor
 	 */
-	public HTTPVerticalConfig() {
+	public HTTPWrapperConfig() {
 	}
 	
 	
@@ -27,8 +27,8 @@ public class HTTPVerticalConfig implements Serializable {
 	 * @param properties Properties file
 	 * @return {@code HTTPVerticalConfig} instance
 	 */
-	public static final HTTPVerticalConfig newInstance(Properties properties) {
-		HTTPVerticalConfig config = new HTTPVerticalConfig();
+	public static final HTTPWrapperConfig newInstance(Properties properties) {
+		HTTPWrapperConfig config = new HTTPWrapperConfig();
 		config.setHttpUseSSL(Boolean.parseBoolean(properties.getProperty(HTTP_USE_SSL_KEY, "false")));
 		config.setHttpCookiePolicy(properties.getProperty(HTTP_COOKIE_POLICY_KEY));
 		config.setHttpPort(Integer.parseInt(properties.getProperty(HTTP_PORT_KEY, "80")));

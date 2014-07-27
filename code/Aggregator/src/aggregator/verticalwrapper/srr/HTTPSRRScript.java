@@ -27,12 +27,13 @@ public class HTTPSRRScript implements SRRScript<Document> {
 	private Hashtable<String, NodeList> nodeListTable;
 	private Stack<QueryResult> srrResult;
 	private Vertical vertical;
-	private Log log = LogFactory.getLog(HTTPSRRScript.class);
 	private ListIterator<String> executionIterator;
 	private Node currentNode;
 	private Queue<Node> nodeHistory;
 	private Queue<ListIterator<String>> executionIteratorHistory;
 	private List<String> executionScript;
+	private XMLUtils xmlUtils;
+	private Log log = LogFactory.getLog(HTTPSRRScript.class);
 	
 	
 	/**
@@ -44,6 +45,7 @@ public class HTTPSRRScript implements SRRScript<Document> {
 		this.nodeListTable = new Hashtable<String, NodeList>();
 		this.nodeHistory = new LinkedList<Node>();
 		this.executionIteratorHistory = new LinkedList<ListIterator<String>>();
+		this.xmlUtils = new XMLUtils();
 	}
 	
 	
@@ -130,7 +132,7 @@ public class HTTPSRRScript implements SRRScript<Document> {
 	 * @param expression XPath expression
 	 */
 	private void cmdList(String listName, String expression) {
-		NodeList nodeList = XMLUtils.executeXPath(currentNode, expression, NodeList.class);
+		NodeList nodeList = xmlUtils.executeXPath(currentNode, expression, NodeList.class);
 		if(nodeList != null) {
 			this.nodeListTable.put(listName, nodeList);
 			
@@ -279,22 +281,22 @@ public class HTTPSRRScript implements SRRScript<Document> {
 		String stringValue = "";
 		
 		if(StringUtils.equalsIgnoreCase(variable, "id")) {
-			stringValue = XMLUtils.executeXPath(currentNode, expression, String.class);
+			stringValue = xmlUtils.executeXPath(currentNode, expression, String.class);
 			queryResult.setId(stringValue);
 		} else if(StringUtils.equalsIgnoreCase(variable, "title")) {
-			stringValue = XMLUtils.executeXPath(currentNode, expression, String.class);
+			stringValue = xmlUtils.executeXPath(currentNode, expression, String.class);
 			queryResult.setTitle(stringValue);
 		} else if(StringUtils.equalsIgnoreCase(variable, "summary")) {
-			stringValue = XMLUtils.executeXPath(currentNode, expression, String.class);
+			stringValue = xmlUtils.executeXPath(currentNode, expression, String.class);
 			queryResult.setSummary(stringValue);
 		} else if(StringUtils.equalsIgnoreCase(variable, "info")) {
-			stringValue = XMLUtils.executeXPath(currentNode, expression, String.class);
+			stringValue = xmlUtils.executeXPath(currentNode, expression, String.class);
 			queryResult.setInfo(stringValue);
 		} else if(StringUtils.equalsIgnoreCase(variable, "authors")) {
-			queryResult.getAuthors().add(XMLUtils.executeXPath(currentNode, expression, String.class));
+			queryResult.getAuthors().add(xmlUtils.executeXPath(currentNode, expression, String.class));
 			stringValue = Arrays.toString(queryResult.getAuthors().toArray());
 		} else if(StringUtils.equalsIgnoreCase(variable, "keywords")) {
-			queryResult.getKeywords().add(XMLUtils.executeXPath(currentNode, expression, String.class));
+			queryResult.getKeywords().add(xmlUtils.executeXPath(currentNode, expression, String.class));
 			stringValue = Arrays.toString(queryResult.getKeywords().toArray());
 		}
 		
@@ -314,7 +316,7 @@ public class HTTPSRRScript implements SRRScript<Document> {
 	 */
 	private <T> T getNodeListValue(String expression, Class<T> returnType) {
 		T result = null;
-		IterableNodeList nodeList = new IterableNodeList(XMLUtils.executeXPath(currentNode, expression, NodeList.class));
+		IterableNodeList nodeList = new IterableNodeList(xmlUtils.executeXPath(currentNode, expression, NodeList.class));
 		if(returnType == String.class) {
 			StringBuilder builder = new StringBuilder();
 			for(Node node : nodeList) {

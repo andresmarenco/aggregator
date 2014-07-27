@@ -1,6 +1,7 @@
 package aggregator.beans;
 
 import java.io.StringReader;
+import java.nio.file.Path;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -15,8 +16,9 @@ import aggregator.util.XMLUtils;
 public class XMLSampledDocument implements SampledDocument<Document> {
 
 	private static final long serialVersionUID = 201407150728L;
-	private Document document;
+	
 	private String id;
+	private Document document;
 	private Log log = LogFactory.getLog(XMLSampledDocument.class);
 	
 	/**
@@ -26,6 +28,17 @@ public class XMLSampledDocument implements SampledDocument<Document> {
 	public XMLSampledDocument(String id) {
 		this.id = id;
 	}
+	
+	
+	/**
+	 * Creates a {@code XMLSampledDocument} reading the given path
+	 * @param path Document path
+	 */
+	public XMLSampledDocument(Path path) {
+		this.id = path.getFileName().toString();
+		this.readFromFile(path);
+	}
+	
 
 	@Override
 	public Document deserialize(String document) {
@@ -46,7 +59,7 @@ public class XMLSampledDocument implements SampledDocument<Document> {
 
 	@Override
 	public String serialize() {
-		return XMLUtils.serializeDOM(document);
+		return XMLUtils.serializeDOM(document, false, true);
 	}
 
 	@Override
@@ -62,6 +75,22 @@ public class XMLSampledDocument implements SampledDocument<Document> {
 	@Override
 	public String getId() {
 		return this.id;
+	}
+
+	@Override
+	public void readFromFile(Path path) {
+		DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
+		DocumentBuilder dBuilder;
+		
+		try
+		{
+			dBuilder = dbFactory.newDocumentBuilder();
+			this.document = dBuilder.parse(path.toFile());
+		}
+		catch(Exception ex) {
+			log.error(ex.getMessage(), ex);
+		}
+		
 	}
 
 }

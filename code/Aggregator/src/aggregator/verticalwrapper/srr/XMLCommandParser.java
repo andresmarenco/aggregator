@@ -12,6 +12,7 @@ import aggregator.util.XMLUtils;
 
 public class XMLCommandParser {
 	
+	private XMLUtils xmlUtils;
 	private Log log = LogFactory.getLog(XMLCommandParser.class);
 	
 	
@@ -19,6 +20,7 @@ public class XMLCommandParser {
 	 * Default Constructor
 	 */
 	public XMLCommandParser() {
+		this.xmlUtils = new XMLUtils();
 	}
 	
 	
@@ -59,7 +61,7 @@ public class XMLCommandParser {
 	 * @param expression XPath expression for the value
 	 */
 	private void cmdSet(Node node, QueryResult queryResult, String variable, String expression) {
-		String value = XMLUtils.executeXPath(node, expression, String.class);
+		String value = xmlUtils.executeXPath(node, expression, String.class);
 		if(StringUtils.equalsIgnoreCase(variable, "id")) {
 			queryResult.setId(value);
 		} else if(StringUtils.equalsIgnoreCase(variable, "title")) {

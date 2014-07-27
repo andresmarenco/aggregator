@@ -15,6 +15,7 @@ public class XMLQueryScript implements QueryScript<NodeList> {
 
 	private Document authData;
 	private NodeList queryResult;
+	private XMLUtils xmlUtils;
 	private Log log = LogFactory.getLog(XMLQueryScript.class);
 	
 	/**
@@ -24,6 +25,7 @@ public class XMLQueryScript implements QueryScript<NodeList> {
 	public XMLQueryScript(Document authData) {
 		this.authData = authData;
 		this.queryResult = null;
+		this.xmlUtils = new XMLUtils();
 	}
 	
 
@@ -68,7 +70,7 @@ public class XMLQueryScript implements QueryScript<NodeList> {
 	private void cmdList(String query, String expression) {
 		expression = StringUtils.replace(expression, "{%QUERY}", query);
 		
-		this.queryResult = XMLUtils.executeXPath(authData, expression, NodeList.class);
+		this.queryResult = xmlUtils.executeXPath(authData, expression, NodeList.class);
 	}
 
 }
