@@ -48,6 +48,9 @@ import aggregator.beans.XMLSampledDocument;
 import aggregator.dataaccess.ConnectionManager;
 import aggregator.dataaccess.DirectConnectionManager;
 import aggregator.dataaccess.VerticalDAO;
+import aggregator.sampler.AbstractSampler;
+import aggregator.sampler.indexer.AbstractSamplerIndexer;
+import aggregator.sampler.indexer.LuceneSamplerIndexer;
 import aggregator.sampler.output.FileSamplerOutput;
 import aggregator.sampler.output.AbstractSamplerOutput;
 import aggregator.sampler.parser.HTMLSamplerParser;
@@ -55,6 +58,7 @@ import aggregator.sampler.parser.SamplerParser;
 import aggregator.util.CommonUtils;
 import aggregator.util.IterableNodeList;
 import aggregator.util.XMLUtils;
+import aggregator.util.delay.RandomDelay;
 import aggregator.verticalwrapper.AbstractVerticalWrapper;
 import aggregator.verticalwrapper.VerticalWrapperController;
 
@@ -257,45 +261,45 @@ public class Main {
 //			
 			
 			
-			VerticalDAO dao = new VerticalDAO(DirectConnectionManager.getInstance());
-			Vertical vertical = dao.loadVertical("arxiv");
-
-			AbstractSamplerOutput aso = AbstractSamplerOutput.newSamplerOutput(vertical);
-			
-			
-			VerticalWrapperController wc = VerticalWrapperController.getInstance();
-			AbstractVerticalWrapper wrapper = wc.createVerticalWrapper(vertical);
-			List<QueryResult> result = wrapper.executeQuery("math");
-			
-			aso.open();
+//			VerticalDAO dao = new VerticalDAO(DirectConnectionManager.getInstance());
+//			Vertical vertical = dao.loadVertical("arxiv");
+//
+//			AbstractSamplerOutput aso = AbstractSamplerOutput.newSamplerOutput(vertical);
 //			
-////			SampledDocument<?> doc = wrapper.downloadDocument(result.get(0));
-////			System.out.println(doc.serialize());
 //			
-			System.out.println("RESULTS!!");
-			for(QueryResult r : result) {
-				System.out.println("\n\nID: " + r.getId());
-				System.out.println("TITLE: " + r.getTitle());
-				System.out.println("SUMMARY: " + r.getSummary());
-				System.out.println("INFO: " + r.getInfo());
-				
-				System.out.println("AUTHORS:");
-				for(String a : r.getAuthors()) {
-					System.out.println(a);
-				}
-				
-				
-				System.out.println("KEYWORDS:");
-				for(String a : r.getKeywords()) {
-					System.out.println(a);
-				}
-			
-				aso.outputDocument(wrapper.downloadDocument(r));
-				break;
-			}
-			
-			
-			aso.close();
+//			VerticalWrapperController wc = VerticalWrapperController.getInstance();
+//			AbstractVerticalWrapper wrapper = wc.createVerticalWrapper(vertical);
+//			List<QueryResult> result = wrapper.executeQuery("math");
+//			
+//			aso.open();
+////			
+//////			SampledDocument<?> doc = wrapper.downloadDocument(result.get(0));
+//////			System.out.println(doc.serialize());
+////			
+//			System.out.println("RESULTS!!");
+//			for(QueryResult r : result) {
+//				System.out.println("\n\nID: " + r.getId());
+//				System.out.println("TITLE: " + r.getTitle());
+//				System.out.println("SUMMARY: " + r.getSummary());
+//				System.out.println("INFO: " + r.getInfo());
+//				
+//				System.out.println("AUTHORS:");
+//				for(String a : r.getAuthors()) {
+//					System.out.println(a);
+//				}
+//				
+//				
+//				System.out.println("KEYWORDS:");
+//				for(String a : r.getKeywords()) {
+//					System.out.println(a);
+//				}
+//			
+//				aso.outputDocument(wrapper.downloadDocument(r));
+//				break;
+//			}
+//			
+//			
+//			aso.close();
 			
 			
 			
@@ -357,6 +361,18 @@ public class Main {
 //		    }
 //		    ireader.close();
 //		    directory.close();
+			
+			
+			VerticalDAO dao = new VerticalDAO(DirectConnectionManager.getInstance());
+			Vertical vertical = dao.loadVertical("arxiv");
+			
+//			SampledDocument<?> xml = new XMLSampledDocument(FileSystems.getDefault().getPath("/home/andres/aggregator/sample/arxiv/000000_20140727042350.html"));
+//			AbstractSamplerIndexer asi = new LuceneSamplerIndexer(vertical);
+//			
+//			asi.tokenize(xml);
+			
+			AbstractSampler as = AbstractSampler.newInstance();
+			as.execute(vertical);
 			
 		}
 		catch(Exception ex) {

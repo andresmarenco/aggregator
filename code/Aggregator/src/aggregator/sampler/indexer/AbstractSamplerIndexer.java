@@ -9,33 +9,33 @@ import org.apache.commons.logging.LogFactory;
 
 import aggregator.beans.SampledDocument;
 import aggregator.beans.Vertical;
-import aggregator.beans.VerticalConfig;
+import aggregator.sampler.AbstractSampler;
 import aggregator.sampler.parser.SamplerParser;
 import aggregator.util.CommonUtils;
+import aggregator.verticalwrapper.VerticalWrapperController;
 
 public abstract class AbstractSamplerIndexer {
 	
 	private static final String SAMPLER_INDEXER_KEY = "aggregator.sampler.indexer";
 
 	protected Vertical vertical;
-	protected VerticalConfig verticalConfig;
 	protected SamplerParser samplerParser;
 	protected List<String> foundTerms;
 	protected List<String> newTerms;
+	protected List<String> uniqueTerms;
 	protected Path indexPath;
 	protected Log log = LogFactory.getLog(getClass());
 	
 	/**
 	 * Default Constructor
 	 * @param vertical Vertical to index
-	 * @param verticalConfig Vertical Configuration
 	 */
-	public AbstractSamplerIndexer(Vertical vertical, VerticalConfig verticalConfig) {
+	public AbstractSamplerIndexer(Vertical vertical) {
 		this.vertical = vertical;
-		this.verticalConfig = verticalConfig;
-		this.samplerParser = verticalConfig.newIndexParserInstance();
+		this.samplerParser = VerticalWrapperController.getInstance().getVerticalConfig(vertical).newIndexParserInstance();
 		this.foundTerms = new ArrayList<String>();
 		this.newTerms = new ArrayList<String>();
+		this.uniqueTerms = new ArrayList<String>();
 		
 		try
 		{
@@ -51,16 +51,19 @@ public abstract class AbstractSamplerIndexer {
 	/**
 	 * Creates a new instance of the corresponding {@code AbstractSamplerIndexer}
 	 * based on the configuration file
-	 * @param vertical Vertical to index
+	 * @param vertical Vertical to index=
+	 * @param sampler Sampler class
 	 * @return {@code AbstractSamplerIndexer} instance
 	 */
-	public static AbstractSamplerIndexer newInstance(Vertical vertical) {
+	public static AbstractSamplerIndexer newInstance(Vertical vertical, AbstractSampler sampler) {
 		AbstractSamplerIndexer result = null;
 		try
 		{
 			Class<? extends AbstractSamplerIndexer> classType = CommonUtils.getSubClassType(AbstractSamplerIndexer.class, System.getProperty(SAMPLER_INDEXER_KEY));
-			if(classType != null) {
-				result = classType.getConstructor(Vertical.class).newInstance(vertical);
+			if(classType == LuceneSamplerIndexer.class) {
+				result = new LuceneSamplerIndexer(vertical, sampler);
+			} else {
+				throw new ClassNotFoundException();
 			}
 		}
 		catch(Exception ex) {
@@ -86,6 +89,15 @@ public abstract class AbstractSamplerIndexer {
 	public List<String> getNewTerms() {
 		return newTerms;
 	}
+
+
+	/**
+	 * @return the uniqueTerms
+	 */
+	public List<String> getUniqueTerms() {
+		return uniqueTerms;
+	}
+
 
 
 	/**
