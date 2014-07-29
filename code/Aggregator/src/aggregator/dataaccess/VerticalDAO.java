@@ -50,6 +50,7 @@ public class VerticalDAO {
 				result = new Vertical();
 				result.setId(id);
 				result.setName(rs.getString("name"));
+				result.setDescription(rs.getString("description"));
 				result.setFedWebCode(rs.getString("fedweb_code"));
 				result.setCategory(new VerticalCategory(rs.getString("vertical_category_id")));
 			}

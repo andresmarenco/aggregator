@@ -1,8 +1,10 @@
 package aggregator.sampler.indexer;
 
+import java.io.IOException;
 import java.io.StringReader;
-import java.nio.file.Path;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 
 import org.apache.lucene.analysis.Analyzer;
@@ -19,8 +21,6 @@ import aggregator.util.FileWriterHelper;
 
 public class LuceneSamplerIndexer extends AbstractSamplerIndexer {
 	
-	private static final String TOKENS_FILE_PATTERN_KEY = "aggregator.sampler.indexer.tokensFilePattern";
-	private Path tokensFile;
 	private Analyzer analyzer;
 	
 	
@@ -35,7 +35,12 @@ public class LuceneSamplerIndexer extends AbstractSamplerIndexer {
 				.replace("{vertical}", vertical.getId())
 				.replace("{timestamp}", CommonUtils.getTimestampString());
 		
+		String tf_dfFileName = System.getProperty(TF_DF_FILE_PATTERN_KEY)
+				.replace("{vertical}", vertical.getId())
+				.replace("{timestamp}", CommonUtils.getTimestampString());
+		
 		this.tokensFile = indexPath.resolve(tokensFileName);
+		this.tf_dfFile = indexPath.resolve(tf_dfFileName);
 		this.analyzer = new StandardAnalyzer(Version.LUCENE_4_9);
 	}
 	
@@ -54,7 +59,13 @@ public class LuceneSamplerIndexer extends AbstractSamplerIndexer {
 				.replace("{vertical}", vertical.getId())
 				.replace("{sampler}", sampler.getSamplerCodeName())
 				.replace("{timestamp}", CommonUtils.getTimestampString());
-		
+
+		String tf_dfFileName = System.getProperty(TF_DF_FILE_PATTERN_KEY)
+				.replace("{vertical}", vertical.getId())
+				.replace("{sampler}", sampler.getSamplerCodeName())
+				.replace("{timestamp}", CommonUtils.getTimestampString());
+
+		this.tf_dfFile = indexPath.resolve(tf_dfFileName);
 		this.tokensFile = indexPath.resolve(tokensFileName);
 		this.analyzer = new StandardAnalyzer(Version.LUCENE_4_9);
 	}
@@ -66,27 +77,52 @@ public class LuceneSamplerIndexer extends AbstractSamplerIndexer {
 		
 		try
 		{
+			HashMap<String, Integer> termFrequency = new HashMap<String, Integer>();
 			List<Entry<String, String>> docText = samplerParser.parseDocument(document);
+			
+			// Joins the document elements
 			StringBuilder stringBuilder = new StringBuilder();
 			for(Entry<String, String> entry : docText) {
 				stringBuilder.append(entry.getValue()).append(" ");
 			}
 			
-			TokenStream tokenStream = analyzer.tokenStream(null, new StringReader(stringBuilder.toString()));
-			tokenStream.reset();
-		    while (tokenStream.incrementToken()) {
-		    	String term = tokenStream.getAttribute(CharTermAttribute.class).toString();
-	    		foundTerms.add(term);
-	    		if(!uniqueTerms.contains(term)) {
-	    			uniqueTerms.add(term);
-	    			newTerms.add(term);
-	    		}
-		    }
 			
-			try(FileWriterHelper fileWriter = new FileWriterHelper(tokensFile)) {
-				fileWriter.open(true);
-				for(String token : foundTerms) {
-					fileWriter.writeLine(token);
+			try(TokenStream tokenStream = analyzer.tokenStream(null, new StringReader(stringBuilder.toString()))) {
+				tokenStream.reset();
+				
+				// Tokenizes the document elements
+			    while (tokenStream.incrementToken()) {
+			    	String term = tokenStream.getAttribute(CharTermAttribute.class).toString();
+		    		foundTerms.add(term);
+		    		
+		    		Integer tf = termFrequency.get(term);
+		    		if(tf == null) {
+		    			termFrequency.put(term, 1);
+		    		} else {
+		    			termFrequency.put(term, tf+1);
+		    		}
+			    }
+
+				
+				// Calculates the global term frequency/document frequency
+				for(Map.Entry<String, Integer> entry : termFrequency.entrySet()) {
+					TF_DF tf_df = uniqueTerms.get(entry.getKey());
+					if(tf_df == null) {
+						uniqueTerms.put(entry.getKey(), new TF_DF(entry.getValue(), 1));
+						newTerms.add(entry.getKey());
+					} else {
+						tf_df.incrementTermFrequency(entry.getValue());
+						tf_df.incrementDocumentFrequency(1);
+					}
+				}
+				
+			    
+			    // Stores the found terms into the corresponding file
+				try(FileWriterHelper fileWriter = new FileWriterHelper(tokensFile)) {
+					fileWriter.open(true);
+					for(String token : foundTerms) {
+						fileWriter.writeLine(token);
+					}
 				}
 			}
 		}
@@ -103,5 +139,11 @@ public class LuceneSamplerIndexer extends AbstractSamplerIndexer {
 		
 	}
 
-	
+
+
+
+	@Override
+	public void close() throws IOException {
+		this.analyzer.close();
+	}
 }

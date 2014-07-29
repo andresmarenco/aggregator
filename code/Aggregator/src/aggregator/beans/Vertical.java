@@ -8,6 +8,7 @@ public class Vertical implements Serializable {
 	
 	private String id;
 	private String name;
+	private String description;
 	private VerticalCategory category;
 	private String fedWebCode;
 	
@@ -43,6 +44,20 @@ public class Vertical implements Serializable {
 	 */
 	public void setName(String name) {
 		this.name = name;
+	}
+
+	/**
+	 * @return the description
+	 */
+	public String getDescription() {
+		return description;
+	}
+
+	/**
+	 * @param description the description to set
+	 */
+	public void setDescription(String description) {
+		this.description = description;
 	}
 
 	/**

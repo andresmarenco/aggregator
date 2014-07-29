@@ -8,7 +8,10 @@ import java.io.FileReader;
 import java.io.InputStreamReader;
 import java.io.StringReader;
 import java.nio.file.FileSystems;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
@@ -35,6 +38,9 @@ import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.RAMDirectory;
 import org.apache.lucene.util.Version;
+import org.joda.time.Period;
+import org.joda.time.format.PeriodFormatter;
+import org.joda.time.format.PeriodFormatterBuilder;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -265,8 +271,8 @@ public class Main {
 //			Vertical vertical = dao.loadVertical("arxiv");
 //
 //			AbstractSamplerOutput aso = AbstractSamplerOutput.newSamplerOutput(vertical);
-//			
-//			
+			
+			
 //			VerticalWrapperController wc = VerticalWrapperController.getInstance();
 //			AbstractVerticalWrapper wrapper = wc.createVerticalWrapper(vertical);
 //			List<QueryResult> result = wrapper.executeQuery("math");
@@ -294,8 +300,8 @@ public class Main {
 //					System.out.println(a);
 //				}
 //			
-//				aso.outputDocument(wrapper.downloadDocument(r));
-//				break;
+////				aso.outputDocument(wrapper.downloadDocument(r));
+////				break;
 //			}
 //			
 //			
@@ -374,6 +380,38 @@ public class Main {
 			AbstractSampler as = AbstractSampler.newInstance();
 			as.execute(vertical);
 			
+//			long startTime = System.currentTimeMillis();
+//			
+//			Thread.sleep(2000);
+//			
+//			long endTime = System.currentTimeMillis();
+//			Period executionTime = new Period(startTime, endTime);
+////			Period executionTime = new Period(
+//			PeriodFormatter periodFormatter = new PeriodFormatterBuilder()
+//				.printZeroAlways()
+////				.printZeroRarelyFirst()
+//				.appendHours()
+//				.appendSeparator("h ")
+//				.appendMinutes()
+//				.appendSeparator("m ")
+//				.appendSeconds()
+//				.appendLiteral("sec ")
+//				.toFormatter();
+//			
+////			Date date = new Date(endTime - startTime);
+////			DateFormat formatter = new SimpleDateFormat("HH:mm:ss:SSS");
+////			String dateFormatted = formatter.format(date);
+////			long millis = endTime - startTime;
+////			
+////			long second = (millis / 1000) % 60;
+////			long minute = (millis / (1000 * 60)) % 60;
+////			long hour = (millis / (1000 * 60 * 60)) % 24;
+////
+////			String time = String.format("%02d:%02d:%02d:%d", hour, minute, second, millis);
+//			
+//			System.out.println(endTime);
+//			System.out.println(startTime);
+//			System.out.println(periodFormatter.print(executionTime));
 		}
 		catch(Exception ex) {
 			ex.printStackTrace();

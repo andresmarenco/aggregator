@@ -1,6 +1,7 @@
 package aggregator.sampler;
 
 import java.nio.file.Path;
+import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -8,6 +9,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.joda.time.LocalDateTime;
 
 import aggregator.beans.Vertical;
 import aggregator.util.CommonUtils;
@@ -20,24 +22,26 @@ import aggregator.util.delay.RandomDelay;
 public abstract class AbstractSampler {
 	
 	private static final String SAMPLER_KEY = "aggregator.sampler";
+	private static final String QUERY_STRATEGY_KEY = "aggregator.sampler.queryStrategy";
 	private static final String LOG_FILE_PATTERN_KEY = "aggregator.sampler.logFilePattern";
 	private static final String DELAY_KEY = "aggregator.sampler.delay";
 	private static final String DELAY_MIN_KEY = "aggregator.sampler.delay.min";
 	private static final String DELAY_MAX_KEY = "aggregator.sampler.delay.max";
-	protected static final String SEED_KEY = "aggregator.sampler.seed";
 	
-	protected List<String> usedSeeds;
-	protected String currentSeed;
+	protected List<String> sampledDocuments;
 	protected DelayHandler delayHandler;
 	protected Path logPath;
 	protected Log log = LogFactory.getLog(getClass());
+	protected Class<?> queryStrategyClass;
 	
 	
 	/**
 	 * Default Constructor
 	 */
 	public AbstractSampler() {
-		this.usedSeeds = new ArrayList<String>();
+		this.queryStrategyClass = CommonUtils.getSubClassType(QueryStrategy.class, System.getProperty(QUERY_STRATEGY_KEY));
+		this.sampledDocuments = new ArrayList<String>();
+		
 		this.reset();
 		this.initDelay();
 		
@@ -115,14 +119,36 @@ public abstract class AbstractSampler {
 	 * Resets the sampler variables
 	 */
 	public void reset() {
-		usedSeeds.clear();
-		
-		String seed = System.getProperty(SAMPLER_KEY);
-		if(StringUtils.isNotBlank(seed)) {
-			currentSeed = seed.trim();
+		sampledDocuments.clear();
+	}
+	
+	
+	/**
+	 * Creates a new instance of the configured query strategy
+	 * @param vertical Vertical to sample
+	 * @return Query strategy instance
+	 */
+	protected QueryStrategy newQueryStrategy(Vertical vertical) {
+		QueryStrategy result = null;
+		if(queryStrategyClass == LRDQueryStrategy.class) {
+			result = new LRDQueryStrategy(vertical);
 		} else {
-			log.error("No initial seed provided");
+			log.error("Undefined or unknown query strategy");
 		}
+		
+		return result;
+	}
+	
+	
+	/**
+	 * Formats an execution log message
+	 * @param pattern Message to log
+	 * @param arguments Arguments for the message
+	 * @return Log message
+	 */
+	protected String getExecutionLogMessage(String pattern, Object... arguments) {
+		final String timestampPattern = "yyyy/MM/dd HH:ss.SSS";
+		return MessageFormat.format("[{0}] {1}", LocalDateTime.now().toString(timestampPattern), MessageFormat.format(pattern, arguments));
 	}
 	
 	
