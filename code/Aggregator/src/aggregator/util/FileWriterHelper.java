@@ -3,6 +3,7 @@ package aggregator.util;
 import java.io.BufferedWriter;
 import java.io.Closeable;
 import java.io.FileWriter;
+import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
@@ -11,11 +12,21 @@ import org.apache.commons.logging.LogFactory;
 
 public class FileWriterHelper implements Closeable {
 	
-	private Log log = LogFactory.getLog(FileWriterHelper.class);
+	protected Log log = LogFactory.getLog(FileWriterHelper.class);
 	
 	private final Path filePath;
 	private FileWriter fileWriter;
 	private BufferedWriter bufferedWriter;
+	
+	
+	/**
+	 * Default Constructor
+	 * @param filePath Path of the output file
+	 * @param more Extra paths for the file
+	 */
+	public FileWriterHelper(String filePath, String... more) {
+		this.filePath = FileSystems.getDefault().getPath(filePath, more);
+	}
 	
 	
 	/**

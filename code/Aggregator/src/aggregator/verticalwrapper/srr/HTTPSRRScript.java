@@ -151,7 +151,7 @@ public class HTTPSRRScript implements SRRScript<Document> {
 	 */
 	private void cmdForeach(String listName) {
 		NodeList list = nodeListTable.get(listName);
-		if(list != null) {
+		if((list != null) && (list.getLength() > 0)) {
 			for(Node node : new IterableNodeList(list)) {
 				nodeHistory.add(node);
 			}

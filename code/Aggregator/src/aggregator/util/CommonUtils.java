@@ -21,12 +21,25 @@ public class CommonUtils {
 	private static final String LOG_PATH_KEY = "aggregator.logPath";
 	private static final String INDEX_PATH_KEY = "aggregator.indexPath";
 	private static final String SAMPLE_PATH_KEY = "aggregator.samplePath";
+	private static final String ANALYSIS_PATH_KEY = "aggregator.analysisPath";
 	private static final String TIMESTAMP_PATTERN_KEY = "aggregator.timeStampPattern";
 	private static Log log = LogFactory.getLog(CommonUtils.class);
 
+	
 	/**
 	 * Gets the current timestamp based on the configured pattern
-	 * @return Current timestamp
+	 * @param time Current timestamp
+	 * @return Formatted timestamp string
+	 */
+	public static final String getTimestampString(long time) {
+		return new LocalDateTime(time).toString(System.getProperty(CommonUtils.TIMESTAMP_PATTERN_KEY, "yyyyMMddhhmmss"));
+	}
+	
+	
+	
+	/**
+	 * Gets the current timestamp based on the configured pattern
+	 * @return Formatted timestamp
 	 */
 	public static final String getTimestampString() {
 		return LocalDateTime.now().toString(System.getProperty(CommonUtils.TIMESTAMP_PATTERN_KEY, "yyyyMMddhhmmss"));
@@ -90,6 +103,18 @@ public class CommonUtils {
 	 */
 	public static final Path getSamplePath() throws IOException {
 		return Files.createDirectories(getHomePath().resolve(System.getProperty(SAMPLE_PATH_KEY)));
+	}
+	
+	
+	
+	
+	/**
+	 * Gets the configured analysis path based on the home path (and creates it if needed)
+	 * @return Analysis path
+	 * @throws IOException
+	 */
+	public static final Path getAnalysisPath() throws IOException {
+		return Files.createDirectories(getHomePath().resolve(System.getProperty(ANALYSIS_PATH_KEY)));
 	}
 	
 	

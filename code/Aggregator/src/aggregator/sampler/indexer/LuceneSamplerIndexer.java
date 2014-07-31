@@ -9,15 +9,16 @@ import java.util.Map.Entry;
 
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.TokenStream;
-import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.lucene.util.Version;
 
 import aggregator.beans.SampledDocument;
+import aggregator.beans.TFDF;
 import aggregator.beans.Vertical;
 import aggregator.sampler.AbstractSampler;
 import aggregator.util.CommonUtils;
 import aggregator.util.FileWriterHelper;
+import aggregator.util.analysis.AggregatorAnalyzer;
 
 public class LuceneSamplerIndexer extends AbstractSamplerIndexer {
 	
@@ -31,44 +32,44 @@ public class LuceneSamplerIndexer extends AbstractSamplerIndexer {
 	public LuceneSamplerIndexer(Vertical vertical) {
 		super(vertical);
 		
-		String tokensFileName = System.getProperty(TOKENS_FILE_PATTERN_KEY)
-				.replace("{vertical}", vertical.getId())
-				.replace("{timestamp}", CommonUtils.getTimestampString());
+//		String tokensFileName = System.getProperty(TOKENS_FILE_PATTERN_KEY)
+//				.replace("{vertical}", vertical.getId())
+//				.replace("{timestamp}", CommonUtils.getTimestampString());
+//		
+//		String tf_dfFileName = System.getProperty(TF_DF_FILE_PATTERN_KEY)
+//				.replace("{vertical}", vertical.getId())
+//				.replace("{timestamp}", CommonUtils.getTimestampString());
 		
-		String tf_dfFileName = System.getProperty(TF_DF_FILE_PATTERN_KEY)
-				.replace("{vertical}", vertical.getId())
-				.replace("{timestamp}", CommonUtils.getTimestampString());
-		
-		this.tokensFile = indexPath.resolve(tokensFileName);
-		this.tf_dfFile = indexPath.resolve(tf_dfFileName);
-		this.analyzer = new StandardAnalyzer(Version.LUCENE_4_9);
+//		this.tokensFile = indexPath.resolve(tokensFileName);
+//		this.tf_dfFile = indexPath.resolve(tf_dfFileName);
+		this.analyzer = new AggregatorAnalyzer(Version.LUCENE_4_9);
 	}
 	
 	
 	
 
-	/**
-	 * Default Constructor
-	 * @param vertical Vertical to index
-	 * @param sampler Sampler class
-	 */
-	public LuceneSamplerIndexer(Vertical vertical, AbstractSampler sampler) {
-		super(vertical);
-		
-		String tokensFileName = System.getProperty(TOKENS_FILE_PATTERN_KEY)
-				.replace("{vertical}", vertical.getId())
-				.replace("{sampler}", sampler.getSamplerCodeName())
-				.replace("{timestamp}", CommonUtils.getTimestampString());
-
-		String tf_dfFileName = System.getProperty(TF_DF_FILE_PATTERN_KEY)
-				.replace("{vertical}", vertical.getId())
-				.replace("{sampler}", sampler.getSamplerCodeName())
-				.replace("{timestamp}", CommonUtils.getTimestampString());
-
-		this.tf_dfFile = indexPath.resolve(tf_dfFileName);
-		this.tokensFile = indexPath.resolve(tokensFileName);
-		this.analyzer = new StandardAnalyzer(Version.LUCENE_4_9);
-	}
+//	/**
+//	 * Default Constructor
+//	 * @param vertical Vertical to index
+//	 * @param sampler Sampler class
+//	 */
+//	public LuceneSamplerIndexer(Vertical vertical, AbstractSampler sampler) {
+//		super(vertical);
+//		
+//		String tokensFileName = System.getProperty(TOKENS_FILE_PATTERN_KEY)
+//				.replace("{vertical}", vertical.getId())
+//				.replace("{sampler}", sampler.getSamplerCodeName())
+//				.replace("{timestamp}", CommonUtils.getTimestampString());
+//
+//		String tf_dfFileName = System.getProperty(TF_DF_FILE_PATTERN_KEY)
+//				.replace("{vertical}", vertical.getId())
+//				.replace("{sampler}", sampler.getSamplerCodeName())
+//				.replace("{timestamp}", CommonUtils.getTimestampString());
+//
+//		this.tf_dfFile = indexPath.resolve(tf_dfFileName);
+//		this.tokensFile = indexPath.resolve(tokensFileName);
+//		this.analyzer = new AggregatorAnalyzer(Version.LUCENE_4_9);
+//	}
 
 	@Override
 	public List<String> tokenize(SampledDocument<?> document) {
@@ -106,9 +107,9 @@ public class LuceneSamplerIndexer extends AbstractSamplerIndexer {
 				
 				// Calculates the global term frequency/document frequency
 				for(Map.Entry<String, Integer> entry : termFrequency.entrySet()) {
-					TF_DF tf_df = uniqueTerms.get(entry.getKey());
+					TFDF tf_df = uniqueTerms.get(entry.getKey());
 					if(tf_df == null) {
-						uniqueTerms.put(entry.getKey(), new TF_DF(entry.getValue(), 1));
+						uniqueTerms.put(entry.getKey(), new TFDF(entry.getValue(), 1));
 						newTerms.add(entry.getKey());
 					} else {
 						tf_df.incrementTermFrequency(entry.getValue());
@@ -118,12 +119,12 @@ public class LuceneSamplerIndexer extends AbstractSamplerIndexer {
 				
 			    
 			    // Stores the found terms into the corresponding file
-				try(FileWriterHelper fileWriter = new FileWriterHelper(tokensFile)) {
-					fileWriter.open(true);
-					for(String token : foundTerms) {
-						fileWriter.writeLine(token);
-					}
-				}
+//				try(FileWriterHelper fileWriter = new FileWriterHelper(tokensFile)) {
+//					fileWriter.open(true);
+//					for(String token : foundTerms) {
+//						fileWriter.writeLine(token);
+//					}
+//				}
 			}
 		}
 		catch(Exception ex) {

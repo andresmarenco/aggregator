@@ -15,4 +15,16 @@ public interface QueryStrategy {
 	 * @return Query term
 	 */
 	public String getNextTerm();
+	
+	/**
+	 * Gets the list of used terms
+	 * @return List of used terms
+	 */
+	public List<String> getUsedTerms();
+	
+	/**
+	 * Gets the code name for the query strategy
+	 * @return Code name for the query strategy
+	 */
+	public String getCodeName();
 }

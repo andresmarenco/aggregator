@@ -1,19 +1,16 @@
 package aggregator.sampler;
 
-import java.nio.file.Path;
-import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.joda.time.LocalDateTime;
 
 import aggregator.beans.Vertical;
 import aggregator.util.CommonUtils;
-import aggregator.util.FileWriterHelper;
 import aggregator.util.delay.DelayHandler;
 import aggregator.util.delay.FixedDelay;
 import aggregator.util.delay.NullDelay;
@@ -23,35 +20,34 @@ public abstract class AbstractSampler {
 	
 	private static final String SAMPLER_KEY = "aggregator.sampler";
 	private static final String QUERY_STRATEGY_KEY = "aggregator.sampler.queryStrategy";
+	private static final String ANALYSIS_FILE_PATTERN_KEY = "aggregator.sampler.analysisFilePattern";
 	private static final String LOG_FILE_PATTERN_KEY = "aggregator.sampler.logFilePattern";
+	private static final String SAMPLE_FILE_PATTERN_KEY = "aggregator.sampler.sampleFilePattern";
 	private static final String DELAY_KEY = "aggregator.sampler.delay";
 	private static final String DELAY_MIN_KEY = "aggregator.sampler.delay.min";
 	private static final String DELAY_MAX_KEY = "aggregator.sampler.delay.max";
 	
 	protected List<String> sampledDocuments;
+	protected List<Map.Entry<String, List<String>>> documentTerms;
 	protected DelayHandler delayHandler;
-	protected Path logPath;
+	protected Vertical vertical;
+	protected QueryStrategy queryStrategy;
+	
 	protected Log log = LogFactory.getLog(getClass());
-	protected Class<?> queryStrategyClass;
 	
 	
 	/**
 	 * Default Constructor
+	 * @param vertical Vertical to sample
 	 */
-	public AbstractSampler() {
-		this.queryStrategyClass = CommonUtils.getSubClassType(QueryStrategy.class, System.getProperty(QUERY_STRATEGY_KEY));
+	public AbstractSampler(Vertical vertical) {
+		this.vertical = vertical;
 		this.sampledDocuments = new ArrayList<String>();
+		this.documentTerms = new ArrayList<Map.Entry<String,List<String>>>();
 		
 		this.reset();
 		this.initDelay();
-		
-		try
-		{
-			this.logPath = CommonUtils.getLogPath();
-		}
-		catch(Exception ex) {
-			log.error(ex.getMessage(), ex);
-		}
+		this.initQueryStrategy();
 	}
 	
 	
@@ -77,18 +73,35 @@ public abstract class AbstractSampler {
 	}
 	
 	
+	
+	/**
+	 * Creates a new instance of the configured query strategy]
+	 * @return Query strategy instance
+	 */
+	private void initQueryStrategy() {
+		Class<? extends QueryStrategy> queryStrategyClass = CommonUtils.getSubClassType(QueryStrategy.class, System.getProperty(QUERY_STRATEGY_KEY));
+		if(queryStrategyClass == LRDQueryStrategy.class) {
+			this.queryStrategy = new LRDQueryStrategy(vertical);
+		} else {
+			log.error("Undefined or unknown query strategy");
+		}
+	}
+	
+	
+	
 	/**
 	 * Creates a new instance of the corresponding {@code AbstractSampler}
 	 * based on the configuration file
+	 * @param vertical Vertical to sample
 	 * @return {@code AbstractSampler} instance
 	 */
-	public static AbstractSampler newInstance() {
+	public static AbstractSampler newInstance(Vertical vertical) {
 		AbstractSampler result = null;
 		try
 		{
 			Class<? extends AbstractSampler> classType = CommonUtils.getSubClassType(AbstractSampler.class, System.getProperty(SAMPLER_KEY));
 			if(classType != null) {
-				result = classType.getConstructor().newInstance();
+				result = classType.getConstructor(Vertical.class).newInstance(vertical);
 			}
 		}
 		catch(Exception ex) {
@@ -100,18 +113,49 @@ public abstract class AbstractSampler {
 	
 	
 	/**
-	 * Creates an execution log file
-	 * @param vertical Vertical to sample
-	 * @return Execution log file
+	 * Gets the analysis file pattern
+	 * @param timestamp Execution timestamp
+	 * @return Analysis file pattern
 	 */
-	protected FileWriterHelper createExecutionLog(Vertical vertical) {
-		String logFileName = System.getProperty(LOG_FILE_PATTERN_KEY)
-				.replace("{vertical}", vertical.getId())
-				.replace("{sampler}", this.getSamplerCodeName())
-				.replace("{timestamp}", CommonUtils.getTimestampString());
-		
-		return new FileWriterHelper(logPath.resolve(logFileName));
+	protected String getAnalysisFilePattern(long timestamp) {
+		return this.getFilePattern(ANALYSIS_FILE_PATTERN_KEY, timestamp);
 	}
+	
+	
+	/**
+	 * Gets the log file pattern
+	 * @param timestamp Execution timestamp
+	 * @return Log file pattern
+	 */
+	protected String getLogFilePattern(long timestamp) {
+		return this.getFilePattern(LOG_FILE_PATTERN_KEY, timestamp);
+	}
+	
+	
+	/**
+	 * Gets the sample file pattern
+	 * @param timestamp Execution timestamp
+	 * @return Sample file pattern
+	 */
+	protected String getSampleFilePattern(long timestamp) {
+		return this.getFilePattern(SAMPLE_FILE_PATTERN_KEY, timestamp);
+	}
+	
+	
+	/**
+	 * Gets the file pattern replacing the available values
+	 * @param filePatternKey Key for the file pattern to use
+	 * @param timestamp Execution timestamp
+	 * @return File pattern
+	 */
+	private String getFilePattern(String filePatternKey, long timestamp) {
+		return System.getProperty(filePatternKey)
+				.replace("{vertical}", vertical.getId())
+				.replace("{execution}", this.getSamplerExecutionCodeName())
+				.replace("{sampler}", this.getSamplerCodeName())
+				.replace("{timestamp}", CommonUtils.getTimestampString(timestamp));
+	}
+	
 	
 	
 	
@@ -120,43 +164,31 @@ public abstract class AbstractSampler {
 	 */
 	public void reset() {
 		sampledDocuments.clear();
+		documentTerms.clear();
 	}
 	
 	
+	
 	/**
-	 * Creates a new instance of the configured query strategy
+	 * Resets the sampler variables and sets a new vertical to sample
 	 * @param vertical Vertical to sample
-	 * @return Query strategy instance
 	 */
-	protected QueryStrategy newQueryStrategy(Vertical vertical) {
-		QueryStrategy result = null;
-		if(queryStrategyClass == LRDQueryStrategy.class) {
-			result = new LRDQueryStrategy(vertical);
-		} else {
-			log.error("Undefined or unknown query strategy");
-		}
-		
-		return result;
-	}
-	
-	
-	/**
-	 * Formats an execution log message
-	 * @param pattern Message to log
-	 * @param arguments Arguments for the message
-	 * @return Log message
-	 */
-	protected String getExecutionLogMessage(String pattern, Object... arguments) {
-		final String timestampPattern = "yyyy/MM/dd HH:ss.SSS";
-		return MessageFormat.format("[{0}] {1}", LocalDateTime.now().toString(timestampPattern), MessageFormat.format(pattern, arguments));
-	}
-	
+	public void reset(Vertical vertical) {
+		this.vertical = vertical;
+		this.initQueryStrategy();
+		this.reset();
+	}	
 	
 	/**
 	 * Executes the sampling process
-	 * @param vertical Vertical to sample
 	 */
-	public abstract void execute(Vertical vertical);
+	public abstract void execute();
+	
+	/**
+	 * Gets the sampler name
+	 * @return Sampler name
+	 */
+	public abstract String getSamplerName();
 	
 	/**
 	 * Gets the sampler code name
@@ -165,8 +197,8 @@ public abstract class AbstractSampler {
 	public abstract String getSamplerCodeName();
 	
 	/**
-	 * Gets the sampler name
-	 * @return Sampler name
+	 * Gets the sampler execution code name
+	 * @return Sampler execution code name
 	 */
-	public abstract String getSamplerName();
+	public abstract String getSamplerExecutionCodeName();
 }

@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
+import org.apache.commons.lang3.StringUtils;
+
 import aggregator.beans.Vertical;
 import aggregator.util.SeedGenerator;
 
@@ -32,8 +34,10 @@ public class LRDQueryStrategy implements QueryStrategy {
 	@Override
 	public void addTerms(List<String> terms) {
 		for(String term : terms) {
-			if((!availableTerms.contains(term)) && (!usedTerms.contains(term))) {
-				availableTerms.add(term);
+			if(!StringUtils.isNumeric(term)) {
+				if((!availableTerms.contains(term)) && (!usedTerms.contains(term))) {
+					availableTerms.add(term);
+				}
 			}
 		}
 	}
@@ -48,5 +52,17 @@ public class LRDQueryStrategy implements QueryStrategy {
 		}
 		
 		return result;
+	}
+
+
+	@Override
+	public List<String> getUsedTerms() {
+		return this.usedTerms;
+	}
+
+
+	@Override
+	public String getCodeName() {
+		return "LRD";
 	}
 }

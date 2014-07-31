@@ -57,13 +57,13 @@ import aggregator.dataaccess.VerticalDAO;
 import aggregator.sampler.AbstractSampler;
 import aggregator.sampler.indexer.AbstractSamplerIndexer;
 import aggregator.sampler.indexer.LuceneSamplerIndexer;
-import aggregator.sampler.output.FileSamplerOutput;
-import aggregator.sampler.output.AbstractSamplerOutput;
+import aggregator.sampler.output.SampledDocumentOutput;
 import aggregator.sampler.parser.HTMLSamplerParser;
 import aggregator.sampler.parser.SamplerParser;
 import aggregator.util.CommonUtils;
 import aggregator.util.IterableNodeList;
 import aggregator.util.XMLUtils;
+import aggregator.util.analysis.AggregatorAnalyzer;
 import aggregator.util.delay.RandomDelay;
 import aggregator.verticalwrapper.AbstractVerticalWrapper;
 import aggregator.verticalwrapper.VerticalWrapperController;
@@ -271,11 +271,11 @@ public class Main {
 //			Vertical vertical = dao.loadVertical("arxiv");
 //
 //			AbstractSamplerOutput aso = AbstractSamplerOutput.newSamplerOutput(vertical);
-			
-			
+//			
+//			
 //			VerticalWrapperController wc = VerticalWrapperController.getInstance();
 //			AbstractVerticalWrapper wrapper = wc.createVerticalWrapper(vertical);
-//			List<QueryResult> result = wrapper.executeQuery("math");
+//			List<QueryResult> result = wrapper.executeQuery("10.1073");
 //			
 //			aso.open();
 ////			
@@ -330,14 +330,20 @@ public class Main {
 //			Analyzer analyzer = new StandardAnalyzer(Version.LUCENE_4_9);
 //			Directory directory = new RAMDirectory();
 //			
-//			String text = "This is the text to be indexed.";
-//			
+//			String text = "This is the text to be indexed 124 p and other things.";
+////			
+//			Analyzer analyzer = new AggregatorAnalyzer(Version.LUCENE_4_9);
 //			TokenStream stream  = analyzer.tokenStream(null, new StringReader(text));
 //		    stream.reset();
 //		    while (stream.incrementToken()) {
 //		    	
 //		    	System.out.println(stream.getAttribute(CharTermAttribute.class).toString());
 //		    }
+//		    
+//		    stream.close();
+//		    analyzer.close();
+		    
+		    
 //			
 //			IndexWriterConfig config = new IndexWriterConfig(Version.LUCENE_4_9, analyzer);
 //		    IndexWriter iwriter = new IndexWriter(directory, config);
@@ -370,48 +376,16 @@ public class Main {
 			
 			
 			VerticalDAO dao = new VerticalDAO(DirectConnectionManager.getInstance());
-			Vertical vertical = dao.loadVertical("arxiv");
+			Vertical vertical = dao.loadVertical("ccsb");
 			
 //			SampledDocument<?> xml = new XMLSampledDocument(FileSystems.getDefault().getPath("/home/andres/aggregator/sample/arxiv/000000_20140727042350.html"));
 //			AbstractSamplerIndexer asi = new LuceneSamplerIndexer(vertical);
 //			
 //			asi.tokenize(xml);
 			
-			AbstractSampler as = AbstractSampler.newInstance();
-			as.execute(vertical);
+			AbstractSampler as = AbstractSampler.newInstance(vertical);
+			as.execute();
 			
-//			long startTime = System.currentTimeMillis();
-//			
-//			Thread.sleep(2000);
-//			
-//			long endTime = System.currentTimeMillis();
-//			Period executionTime = new Period(startTime, endTime);
-////			Period executionTime = new Period(
-//			PeriodFormatter periodFormatter = new PeriodFormatterBuilder()
-//				.printZeroAlways()
-////				.printZeroRarelyFirst()
-//				.appendHours()
-//				.appendSeparator("h ")
-//				.appendMinutes()
-//				.appendSeparator("m ")
-//				.appendSeconds()
-//				.appendLiteral("sec ")
-//				.toFormatter();
-//			
-////			Date date = new Date(endTime - startTime);
-////			DateFormat formatter = new SimpleDateFormat("HH:mm:ss:SSS");
-////			String dateFormatted = formatter.format(date);
-////			long millis = endTime - startTime;
-////			
-////			long second = (millis / 1000) % 60;
-////			long minute = (millis / (1000 * 60)) % 60;
-////			long hour = (millis / (1000 * 60 * 60)) % 24;
-////
-////			String time = String.format("%02d:%02d:%02d:%d", hour, minute, second, millis);
-//			
-//			System.out.println(endTime);
-//			System.out.println(startTime);
-//			System.out.println(periodFormatter.print(executionTime));
 		}
 		catch(Exception ex) {
 			ex.printStackTrace();
