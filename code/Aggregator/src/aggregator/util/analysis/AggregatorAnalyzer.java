@@ -7,6 +7,7 @@ import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.core.LowerCaseFilter;
 import org.apache.lucene.analysis.core.StopAnalyzer;
 import org.apache.lucene.analysis.core.StopFilter;
+import org.apache.lucene.analysis.en.PorterStemFilter;
 import org.apache.lucene.analysis.standard.StandardFilter;
 import org.apache.lucene.analysis.standard.StandardTokenizer;
 import org.apache.lucene.analysis.util.CharArraySet;
@@ -80,6 +81,7 @@ public class AggregatorAnalyzer extends StopwordAnalyzerBase {
 	    tok = new SingleCharFilter(matchVersion, tok);
 //	    tok = new NumberFilter(matchVersion, tok);
 	    tok = new StopFilter(matchVersion, tok, stopwords);
+//	    tok = new PorterStemFilter(tok);
 	    
 	    return new TokenStreamComponents(src, tok) {
 	      @Override

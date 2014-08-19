@@ -8,13 +8,13 @@ import org.apache.commons.logging.LogFactory;
 import aggregator.util.CommonUtils;
 import aggregator.util.FileWriterHelper;
 
-public class DocumentsLogFile extends FileWriterHelper {
+public class QueryDocumentsLogFile extends FileWriterHelper {
 
 	/**
 	 * Default Constructor
 	 * @param filePath File Path
 	 */
-	public DocumentsLogFile(Path filePath) {
+	public QueryDocumentsLogFile(Path filePath) {
 		super(filePath);
 		this.open(false);
 		
@@ -27,15 +27,15 @@ public class DocumentsLogFile extends FileWriterHelper {
 	 * @param fileName Name of the file
 	 * @return Log file
 	 */
-	public static DocumentsLogFile newInstance(String fileName) {
-		DocumentsLogFile result = null;
+	public static QueryDocumentsLogFile newInstance(String fileName) {
+		QueryDocumentsLogFile result = null;
 		try
 		{
 			Path analysisPath = CommonUtils.getAnalysisPath();
-			result = new DocumentsLogFile(analysisPath.resolve(fileName.replace("{docType}", "docs")));
+			result = new QueryDocumentsLogFile(analysisPath.resolve(fileName.replace("{docType}", "queryDocs")));
 		}
 		catch(Exception ex) {
-			LogFactory.getLog(DocumentsLogFile.class).error(ex.getMessage(), ex);
+			LogFactory.getLog(QueryDocumentsLogFile.class).error(ex.getMessage(), ex);
 		}
 		
 		return result;

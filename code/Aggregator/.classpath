@@ -5,10 +5,13 @@
 	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/Apache Commons Logging 1.1.3"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/PostgreSQL JDBC4 9.1"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/Joda Time 2.3"/>
-	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/Apache Commons Lang3 3.3.2"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/JDOM 2.0.5"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/HttpComponents Client 4.3.4"/>
-	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/HtmlCleaner 2.8"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/Apache Lucene 4.9.0"/>
+	<classpathentry kind="lib" path="/home/andres/workspace/lib/jbibtex-1.0.14/jbibtex-1.0.14.jar" sourcepath="/home/andres/git/jbibtex/jbibtex"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/jsoup 1.7.3"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/Apache Commons Math 3.3"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/Apache Commons Lang 3.3.2"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/PDFBox 1.8.6"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

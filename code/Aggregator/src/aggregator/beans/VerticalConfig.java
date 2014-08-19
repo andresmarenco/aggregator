@@ -37,6 +37,7 @@ public class VerticalConfig implements Serializable {
 	private String idPattern;
 	private WrapperConfig wrapperConfig;
 	private IndexParserConfig indexParserConfig;
+	private AnalysisConfig analysisConfig;
 	
 	/**
 	 * Default Constructor
@@ -60,6 +61,8 @@ public class VerticalConfig implements Serializable {
 		if(config.getIndexParserType() == HTMLSamplerParser.class) {
 			config.setIndexParserConfig(HTMLIndexParserConfig.newInstance(properties));
 		}
+		
+		config.setAnalysisConfig(AnalysisConfig.newInstance(properties));
 		
 		
 		try
@@ -217,5 +220,19 @@ public class VerticalConfig implements Serializable {
 	 */
 	public void setIndexParserConfig(IndexParserConfig indexParserConfig) {
 		this.indexParserConfig = indexParserConfig;
+	}
+
+	/**
+	 * @return the analysisConfig
+	 */
+	public AnalysisConfig getAnalysisConfig() {
+		return analysisConfig;
+	}
+
+	/**
+	 * @param analysisConfig the analysisConfig to set
+	 */
+	public void setAnalysisConfig(AnalysisConfig analysisConfig) {
+		this.analysisConfig = analysisConfig;
 	}
 }

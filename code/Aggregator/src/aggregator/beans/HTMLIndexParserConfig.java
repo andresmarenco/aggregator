@@ -1,6 +1,8 @@
 package aggregator.beans;
 
 import java.io.Serializable;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Properties;
 
 public class HTMLIndexParserConfig implements IndexParserConfig, Serializable {
@@ -10,13 +12,21 @@ public class HTMLIndexParserConfig implements IndexParserConfig, Serializable {
 	private static final String PARSER_READ_METATAGS_KEY = "index.parser.readMetaTags";
 	private static final String PARSER_READ_BODY_KEY = "index.parser.readBody";
 	private static final String PARSER_REMOVE_SCRIPTS_KEY = "index.parser.removeScripts";
+	private static final String PARSER_REMOVE_NUMBERS_KEY = "index.parser.removeNumbers";
 	private static final String PARSER_READ_CONTENTS_KEY = "index.parser.readContents";
+	private static final String PARSER_READ_BIBTEX_KEY = "index.parser.readBibTeX";
+	private static final String PARSER_IGNORE_BIBTEX_KEY = "index.parser.readBibTeX.ignore";
+	private static final String PARSER_STOPWORDS_KEY = "index.parser.stopwords";
 	
 	private boolean readTitle;
 	private boolean readMetaTags;
 	private boolean readBody;
 	private boolean removeScripts;
+	private boolean removeNumbers;
 	private String readContents;
+	private String readBibTeX;
+	private List<String> ignoreBibTeX;
+	private List<String> stopwords;
 
 	/**
 	 * Default Constructor
@@ -37,7 +47,11 @@ public class HTMLIndexParserConfig implements IndexParserConfig, Serializable {
 		config.setReadMetaTags(Boolean.parseBoolean(properties.getProperty(PARSER_READ_METATAGS_KEY, "true")));
 		config.setReadBody(Boolean.parseBoolean(properties.getProperty(PARSER_READ_BODY_KEY, "true")));
 		config.setRemoveScripts(Boolean.parseBoolean(properties.getProperty(PARSER_REMOVE_SCRIPTS_KEY, "true")));
-		config.setReadContents(properties.getProperty(PARSER_READ_CONTENTS_KEY).trim());
+		config.setRemoveNumbers(Boolean.parseBoolean(properties.getProperty(PARSER_REMOVE_NUMBERS_KEY, "false")));
+		config.setReadContents(properties.getProperty(PARSER_READ_CONTENTS_KEY, "").trim());
+		config.setReadBibTeX(properties.getProperty(PARSER_READ_BIBTEX_KEY, "").trim());
+		config.setStopwords(Arrays.asList(properties.getProperty(PARSER_STOPWORDS_KEY, "").toLowerCase().split("\\|")));
+		config.setIgnoreBibTeX(Arrays.asList(properties.getProperty(PARSER_IGNORE_BIBTEX_KEY, "").toLowerCase().split("\\|")));
 		
 		return config;
 	}
@@ -130,6 +144,78 @@ public class HTMLIndexParserConfig implements IndexParserConfig, Serializable {
 	 */
 	public void setRemoveScripts(boolean removeScripts) {
 		this.removeScripts = removeScripts;
+	}
+
+
+
+	/**
+	 * @return the removeNumbers
+	 */
+	public boolean isRemoveNumbers() {
+		return removeNumbers;
+	}
+
+
+
+	/**
+	 * @param removeNumbers the removeNumbers to set
+	 */
+	public void setRemoveNumbers(boolean removeNumbers) {
+		this.removeNumbers = removeNumbers;
+	}
+
+
+
+	/**
+	 * @return the stopwords
+	 */
+	public List<String> getStopwords() {
+		return stopwords;
+	}
+
+
+
+	/**
+	 * @param stopwords the stopwords to set
+	 */
+	public void setStopwords(List<String> stopwords) {
+		this.stopwords = stopwords;
+	}
+
+
+
+	/**
+	 * @return the readBibTeX
+	 */
+	public String getReadBibTeX() {
+		return readBibTeX;
+	}
+
+
+
+	/**
+	 * @param readBibTeX the readBibTeX to set
+	 */
+	public void setReadBibTeX(String readBibTeX) {
+		this.readBibTeX = readBibTeX;
+	}
+
+
+
+	/**
+	 * @return the ignoreBibTeX
+	 */
+	public List<String> getIgnoreBibTeX() {
+		return ignoreBibTeX;
+	}
+
+
+
+	/**
+	 * @param ignoreBibTeX the ignoreBibTeX to set
+	 */
+	public void setIgnoreBibTeX(List<String> ignoreBibTeX) {
+		this.ignoreBibTeX = ignoreBibTeX;
 	}
 	
 	

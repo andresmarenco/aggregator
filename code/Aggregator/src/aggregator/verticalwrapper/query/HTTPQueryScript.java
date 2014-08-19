@@ -6,6 +6,7 @@ import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.commons.lang3.CharEncoding;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -32,21 +33,19 @@ import org.apache.http.impl.client.LaxRedirectStrategy;
 import org.apache.http.impl.cookie.BestMatchSpecFactory;
 import org.apache.http.impl.cookie.BrowserCompatSpecFactory;
 import org.apache.http.message.BasicNameValuePair;
-import org.htmlcleaner.CleanerProperties;
-import org.htmlcleaner.DomSerializer;
-import org.htmlcleaner.HtmlCleaner;
-import org.htmlcleaner.TagNode;
+import org.jsoup.Jsoup;
 import org.w3c.dom.Document;
 
 import aggregator.beans.HTTPWrapperConfig;
 import aggregator.beans.WrapperConfig;
+import aggregator.util.DOMBuilder;
 import aggregator.util.HTTPUtils;
 
 public class HTTPQueryScript implements QueryScript<Document> {
 	
-	private CleanerProperties cleanerProperties;
-	private HtmlCleaner htmlCleaner;
-	private DomSerializer domSerializer;
+//	private CleanerProperties cleanerProperties;
+//	private HtmlCleaner htmlCleaner;
+//	private DomSerializer domSerializer;
 	private HttpClientContext httpContext;
 	private HttpRequestBase httpMethod;
 	private RequestConfig requestConfig;
@@ -105,9 +104,9 @@ public class HTTPQueryScript implements QueryScript<Document> {
 		
 		this.params = new ArrayList<NameValuePair>();
 		
-		this.cleanerProperties = new CleanerProperties();
-		this.htmlCleaner = new HtmlCleaner(cleanerProperties);
-		this.domSerializer = new DomSerializer(cleanerProperties);
+//		this.cleanerProperties = new CleanerProperties();
+//		this.htmlCleaner = new HtmlCleaner(cleanerProperties);
+//		this.domSerializer = new DomSerializer(cleanerProperties);
 	}
 	
 	
@@ -216,8 +215,9 @@ public class HTTPQueryScript implements QueryScript<Document> {
 					if(responseEntity != null) {
 						try(InputStream in = responseEntity.getContent())
 						{
-							TagNode rootNode = htmlCleaner.clean(in);
-							this.responseDocument = domSerializer.createDOM(rootNode);
+							this.responseDocument = DOMBuilder.jsoup2DOM(Jsoup.parse(in, CharEncoding.UTF_8, ""));
+//							TagNode rootNode = htmlCleaner.clean(in);
+//							this.responseDocument = domSerializer.createDOM(rootNode);
 						}
 						
 					} else {

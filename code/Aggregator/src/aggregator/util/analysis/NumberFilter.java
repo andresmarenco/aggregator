@@ -2,7 +2,7 @@ package aggregator.util.analysis;
 
 import java.io.IOException;
 
-import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.math.NumberUtils;
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.lucene.analysis.util.FilteringTokenFilter;
@@ -23,7 +23,7 @@ public class NumberFilter extends FilteringTokenFilter {
 
 	@Override
 	protected boolean accept() throws IOException {
-		return !StringUtils.isNumeric(new String(termAtt.buffer(), 0, termAtt.length()));
+		return !NumberUtils.isNumber(new String(termAtt.buffer(), 0, termAtt.length()));
 	}
 
 }

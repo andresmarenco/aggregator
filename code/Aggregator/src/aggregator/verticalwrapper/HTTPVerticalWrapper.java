@@ -4,7 +4,9 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.commons.lang3.CharEncoding;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.math.NumberUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.client.CookieStore;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -13,16 +15,15 @@ import org.apache.http.client.protocol.HttpClientContext;
 import org.apache.http.impl.client.BasicCookieStore;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
-import org.htmlcleaner.CleanerProperties;
-import org.htmlcleaner.DomSerializer;
-import org.htmlcleaner.HtmlCleaner;
-import org.htmlcleaner.TagNode;
+import org.jsoup.Jsoup;
 import org.w3c.dom.Document;
 
 import aggregator.beans.QueryResult;
 import aggregator.beans.Vertical;
 import aggregator.beans.VerticalConfig;
 import aggregator.beans.XMLSampledDocument;
+import aggregator.util.DOMBuilder;
+import aggregator.util.XMLUtils;
 import aggregator.verticalwrapper.query.HTTPQueryScript;
 import aggregator.verticalwrapper.query.QueryScript;
 import aggregator.verticalwrapper.srr.HTTPSRRScript;
@@ -30,9 +31,10 @@ import aggregator.verticalwrapper.srr.SRRScript;
 
 public class HTTPVerticalWrapper extends AbstractVerticalWrapper {
 	
-	private CleanerProperties cleanerProperties;
-	private HtmlCleaner htmlCleaner;
-	private DomSerializer domSerializer;
+//	private CleanerProperties cleanerProperties;
+//	private HtmlCleaner htmlCleaner;
+//	private DomSerializer domSerializer;
+	private XMLUtils xmlUtils;
 	
 	/**
 	 * Default Constructor
@@ -42,10 +44,11 @@ public class HTTPVerticalWrapper extends AbstractVerticalWrapper {
 	public HTTPVerticalWrapper(Vertical vertical, VerticalConfig config) {
 		super(vertical, config);
 		
-		this.cleanerProperties = new CleanerProperties();
-		this.cleanerProperties.setOmitDoctypeDeclaration(true);
-		this.htmlCleaner = new HtmlCleaner(cleanerProperties);
-		this.domSerializer = new DomSerializer(cleanerProperties);
+		this.xmlUtils = new XMLUtils();
+//		this.cleanerProperties = new CleanerProperties();
+//		this.cleanerProperties.setOmitDoctypeDeclaration(true);
+//		this.htmlCleaner = new HtmlCleaner(cleanerProperties);
+//		this.domSerializer = new DomSerializer(cleanerProperties);
 	}
 	
 
@@ -90,8 +93,12 @@ public class HTTPVerticalWrapper extends AbstractVerticalWrapper {
 					result = new XMLSampledDocument(document.getId());
 
 					try(InputStream in = httpEntity.getContent()) {
-						TagNode rootNode = htmlCleaner.clean(in);
-						result.setDocument(domSerializer.createDOM(rootNode));
+						result.setDocument(DOMBuilder.jsoup2DOM(Jsoup.parse(in, CharEncoding.UTF_8, "")));
+						
+//						this.document = DOMBuilder.jsoup2DOM(Jsoup.parse(new String(Files.readAllBytes(path))));
+						
+//						TagNode rootNode = htmlCleaner.clean(in);
+//						result.setDocument(domSerializer.createDOM(rootNode));
 					}
 					
 				} else {
@@ -105,6 +112,23 @@ public class HTTPVerticalWrapper extends AbstractVerticalWrapper {
 		}
 		
 		return result;
+	}
+	
+	
+	@Override
+	public long getDocumentsByTerm(String term) {
+		long total = Long.MIN_VALUE;
+		
+		HttpClientContext httpContext = this.authenticate();
+		QueryScript<Document> queryScript = new HTTPQueryScript(httpContext, config.getWrapperConfig());
+		Document resultsPage = queryScript.execute(term, config.getQueryScript());
+		
+		String count = xmlUtils.executeXPath(resultsPage, config.getAnalysisConfig().getTotalRecords(), String.class);
+		if((StringUtils.isNotBlank(count)) && (NumberUtils.isNumber(count))) {
+			total = Long.parseLong(count);
+		}
+		
+		return total;
 	}
 
 }

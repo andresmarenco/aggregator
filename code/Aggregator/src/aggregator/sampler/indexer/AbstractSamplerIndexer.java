@@ -109,22 +109,6 @@ public abstract class AbstractSamplerIndexer implements Closeable {
 		return uniqueTerms.size();
 	}
 
-	
-	
-//	/**
-//	 * Stores the term frequency/document frequency in the corresponding file
-//	 */
-//	public void storeTF_DF() {
-//		try(FileWriterHelper fileWriter = new FileWriterHelper(tf_dfFile)) {
-//			fileWriter.open(true);
-//			fileWriter.writeLine("TERM,TF,DF");
-//			
-//			for(Map.Entry<String, TF_DF> entry : uniqueTerms.entrySet()) {
-//				fileWriter.writeLine(MessageFormat.format("{0},{1},{2}", entry.getKey(), entry.getValue().getTermFrequency(), entry.getValue().getDocumentFrequency()));
-//			}
-//		}
-//	}
-
 
 
 	/**

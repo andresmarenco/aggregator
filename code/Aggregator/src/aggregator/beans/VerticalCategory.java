@@ -9,7 +9,6 @@ public class VerticalCategory implements Serializable {
 	private String id;
 	private String name;
 	private String description;
-	private String fedWebCode;
 	
 	/**
 	 * Default Constructor
@@ -68,20 +67,6 @@ public class VerticalCategory implements Serializable {
 	 */
 	public void setDescription(String description) {
 		this.description = description;
-	}
-
-	/**
-	 * @return the fedWebCode
-	 */
-	public String getFedWebCode() {
-		return fedWebCode;
-	}
-
-	/**
-	 * @param fedWebCode the fedWebCode to set
-	 */
-	public void setFedWebCode(String fedWebCode) {
-		this.fedWebCode = fedWebCode;
 	}
 	
 }

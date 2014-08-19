@@ -1,6 +1,7 @@
 package aggregator.beans;
 
 import java.io.StringReader;
+import java.nio.file.Files;
 import java.nio.file.Path;
 
 import javax.xml.parsers.DocumentBuilder;
@@ -8,9 +9,11 @@ import javax.xml.parsers.DocumentBuilderFactory;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.jsoup.Jsoup;
 import org.w3c.dom.Document;
 import org.xml.sax.InputSource;
 
+import aggregator.util.DOMBuilder;
 import aggregator.util.XMLUtils;
 
 public class XMLSampledDocument implements SampledDocument<Document> {
@@ -79,16 +82,12 @@ public class XMLSampledDocument implements SampledDocument<Document> {
 
 	@Override
 	public void readFromFile(Path path) {
-		DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
-		DocumentBuilder dBuilder;
-		
 		try
 		{
-			dBuilder = dbFactory.newDocumentBuilder();
-			this.document = dBuilder.parse(path.toFile());
+			this.document = DOMBuilder.jsoup2DOM(Jsoup.parse(new String(Files.readAllBytes(path))));
 		}
 		catch(Exception ex) {
-			log.error(ex.getMessage(), ex);
+			log.error("Bad formed HTML. Couldn't fix.");	
 		}
 		
 	}

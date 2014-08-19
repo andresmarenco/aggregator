@@ -1,6 +1,7 @@
 package aggregator.beans;
 
 import java.io.Serializable;
+import java.util.List;
 
 public class Vertical implements Serializable {
 
@@ -9,8 +10,7 @@ public class Vertical implements Serializable {
 	private String id;
 	private String name;
 	private String description;
-	private VerticalCategory category;
-	private String fedWebCode;
+	private List<VerticalCategory> categories;
 	
 	/**
 	 * Default Constructor
@@ -61,31 +61,17 @@ public class Vertical implements Serializable {
 	}
 
 	/**
-	 * @return the category
+	 * @return the categories
 	 */
-	public VerticalCategory getCategory() {
-		return category;
+	public List<VerticalCategory> getCategories() {
+		return categories;
 	}
 
 	/**
-	 * @param category the category to set
+	 * @param categories the categories to set
 	 */
-	public void setCategory(VerticalCategory category) {
-		this.category = category;
-	}
-
-	/**
-	 * @return the fedWebCode
-	 */
-	public String getFedWebCode() {
-		return fedWebCode;
-	}
-
-	/**
-	 * @param fedWebCode the fedWebCode to set
-	 */
-	public void setFedWebCode(String fedWebCode) {
-		this.fedWebCode = fedWebCode;
+	public void setCategories(List<VerticalCategory> categories) {
+		this.categories = categories;
 	}
 	
 }

@@ -92,4 +92,12 @@ public class XMLVerticalWrapper extends AbstractVerticalWrapper {
 		
 		return result;
 	}
+
+
+
+
+	@Override
+	public long getDocumentsByTerm(String term) {
+		return Long.MIN_VALUE;
+	}
 }

@@ -8,12 +8,17 @@ import java.io.FileReader;
 import java.io.InputStreamReader;
 import java.io.StringReader;
 import java.nio.file.FileSystems;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.text.DateFormat;
+import java.text.MessageFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -22,6 +27,8 @@ import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathFactory;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.math.NumberUtils;
+import org.apache.commons.math3.stat.descriptive.SummaryStatistics;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
@@ -38,6 +45,17 @@ import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.RAMDirectory;
 import org.apache.lucene.util.Version;
+import org.apache.pdfbox.cos.COSDocument;
+import org.apache.pdfbox.pdfparser.PDFParser;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.PDDocumentInformation;
+import org.apache.pdfbox.util.PDFTextStripper;
+import org.jbibtex.BibTeXDatabase;
+import org.jbibtex.BibTeXEntry;
+import org.jbibtex.BibTeXParser;
+import org.jbibtex.BibTeXString;
+import org.jbibtex.Key;
+import org.jbibtex.Value;
 import org.joda.time.Period;
 import org.joda.time.format.PeriodFormatter;
 import org.joda.time.format.PeriodFormatterBuilder;
@@ -47,17 +65,24 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 
+import aggregator.beans.PDFSampledDocument;
 import aggregator.beans.QueryResult;
 import aggregator.beans.SampledDocument;
 import aggregator.beans.Vertical;
+import aggregator.beans.VerticalCategory;
+import aggregator.beans.VerticalConfig;
 import aggregator.beans.XMLSampledDocument;
 import aggregator.dataaccess.ConnectionManager;
 import aggregator.dataaccess.DirectConnectionManager;
 import aggregator.dataaccess.VerticalDAO;
 import aggregator.sampler.AbstractSampler;
+import aggregator.sampler.analysis.DocumentAnalysis;
+import aggregator.sampler.analysis.sizeestimation.CaptureHistory;
+import aggregator.sampler.analysis.sizeestimation.SampleResample;
 import aggregator.sampler.indexer.AbstractSamplerIndexer;
 import aggregator.sampler.indexer.LuceneSamplerIndexer;
 import aggregator.sampler.output.SampledDocumentOutput;
+import aggregator.sampler.output.TokensLogFile;
 import aggregator.sampler.parser.HTMLSamplerParser;
 import aggregator.sampler.parser.SamplerParser;
 import aggregator.util.CommonUtils;
@@ -375,16 +400,116 @@ public class Main {
 //		    directory.close();
 			
 			
-			VerticalDAO dao = new VerticalDAO(DirectConnectionManager.getInstance());
-			Vertical vertical = dao.loadVertical("ccsb");
 			
-//			SampledDocument<?> xml = new XMLSampledDocument(FileSystems.getDefault().getPath("/home/andres/aggregator/sample/arxiv/000000_20140727042350.html"));
-//			AbstractSamplerIndexer asi = new LuceneSamplerIndexer(vertical);
+//			SampledDocument<?> xml = new XMLSampledDocument(FileSystems.getDefault().getPath("/home/andres/aggregator/sample/FW13-sample-docs/e009/5010_02.html"));
+//System.out.println(xml.serialize());			
+			
+			
+			
+			
 //			
-//			asi.tokenize(xml);
+////			SampledDocument<?> xml = new XMLSampledDocument(FileSystems.getDefault().getPath("/home/andres/aggregator/sample/arxiv/000000_20140727042350.html"));
+////			AbstractSamplerIndexer asi = new LuceneSamplerIndexer(vertical);
+////			
+////			asi.tokenize(xml);
+//			
+////			AbstractSampler as = AbstractSampler.newInstance(vertical);
+////			as.execute();
+//			
+//			VerticalDAO dao = new VerticalDAO(DirectConnectionManager.getInstance());
+//			Vertical vertical = dao.loadVertical("msacademic");
+//			
+////			VerticalWrapperController vw = VerticalWrapperController.getInstance();
+////			VerticalConfig vc = vw.getVerticalConfig(vertical);
+//			
+//			DocumentAnalysis docAnalysis = new DocumentAnalysis(vertical);
+//			docAnalysis.analyzeHTMLSample("FW13-sample-docs/e010");
 			
-			AbstractSampler as = AbstractSampler.newInstance(vertical);
-			as.execute();
+//			CaptureHistory ch = new CaptureHistory(vertical);
+//			ch.estimateSize("FW13-sample-docs/e002", "20140818221616");
+			
+			
+			
+			
+//			AbstractSamplerIndexer samplerIndexer = AbstractSamplerIndexer.newInstance(vertical);
+//			System.out.println("START");
+//			for(String t : samplerIndexer.tokenize(xml)) {
+//				System.out.println(t);
+//			}
+			
+////
+//			HTMLSamplerParser sp = new HTMLSamplerParser(vc.getIndexParserConfig());
+//////			
+//			for(Entry<String,String> entry : sp.parseDocument(xml)) {
+//				System.out.println(entry.getKey() + "   " + entry.getValue());
+//			}
+////			
+//			
+//			String pathname = "/home/andres/aggregator/analysis/FW13-sample-docs/e009/e009_{timestamp}.{docType}".replace("{timestamp}", CommonUtils.getTimestampString());
+//		
+//			try(DocumentAnalysis docAnalysis = new DocumentAnalysis(vertical)) {
+//				docAnalysis.open(pathname);
+//				
+//				Files.walk(Paths.get("/home/andres/aggregator/sample/FW13-sample-docs/e009")).forEach(filePath -> {
+//				    if (Files.isRegularFile(filePath) && filePath.getFileName().toString().endsWith(".html")) {
+//				    	System.out.println("Analyzing " + filePath);
+//			    		SampledDocument<?> doc = new XMLSampledDocument(filePath);
+//			    		docAnalysis.analyzeDocument(doc);
+//				    }
+//				});
+//				
+//			}
+//			
+//			String bib = "@article{callan2001,"
+//					+ "author = {Callan, Jamie and Connell, Margaret},"
+//					+ "title = {Query-based Sampling of Text Databases},"
+//					+ "journal = {ACM Transactions on Information Systems (TOIS)},"
+//					+ "issue_date = {April 2001},"
+//					+ "volume = {19},"
+//					+ "number = {2},"
+//					+ "month = apr,"
+//					+ "year = {2001},"
+//					+ "issn = {1046-8188},"
+//					+ "pages = {97--130},"
+//					+ "numpages = {34},"
+//					+ "doi = {10.1145/382979.383040},"
+//					+ "acmid = {383040},"
+//					+ "publisher = {ACM},"
+//					+ "address = {New York, NY, USA},"
+//					+ "keywords = {distributed information retrieval, query-based sampling, resource ranking, resource selection, server selection}}";
+//			
+//
+//			
+			
+//			String bib = "@TechReport{Menard90, author = \"Claude Menard\", year = \"1990\", title = \"{L}'\'{e}conomie des organisations\", type = \"Collection Rep\\{e}res, n 86\", institution = \"La D\'{e}couverte, Paris\", } ";
+//			
+//			BibTeXParser btp = new BibTeXParser() {
+//				@Override
+//				public void checkCrossReferenceResolution(org.jbibtex.Key key,
+//						BibTeXEntry entry) {
+//					
+//				}
+//				
+//				@Override
+//				public void checkStringResolution(org.jbibtex.Key key,
+//						BibTeXString string) {
+//				}
+//			};
+//			BibTeXDatabase btd = btp.parse(new StringReader(bib));
+//			
+//			Collection<org.jbibtex.BibTeXEntry> entries = btd.getEntries().values();
+//			for(org.jbibtex.BibTeXEntry entry : entries){
+////			    org.jbibtex.Value value = entry.getField(org.jbibtex.BibTeXEntry.KEY_TITLE);
+////			    if(value == null){
+////			        continue;
+////			    }
+////
+////			    // Do something with the title value
+//				
+//				for(Entry<Key, Value> data : entry.getFields().entrySet()) {
+//					System.out.println(data.getKey() + "  " + data.getValue().toUserString());
+//				}
+//			}
 			
 		}
 		catch(Exception ex) {

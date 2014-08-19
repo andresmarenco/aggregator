@@ -45,4 +45,11 @@ public abstract class AbstractVerticalWrapper {
 	 * @return Complete sampled document
 	 */
 	public abstract SampledDocument<?> downloadDocument(QueryResult document);
+	
+	/**
+	 * Gets the total number of documents found after querying the term
+	 * @param resultsPage HTML results page
+	 * @return Number of documents found or {@code Long.MIN_VALUE}
+	 */
+	public abstract long getDocumentsByTerm(String term);
 }

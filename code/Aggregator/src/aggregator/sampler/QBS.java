@@ -12,7 +12,7 @@ import aggregator.beans.SampledDocument;
 import aggregator.beans.Vertical;
 import aggregator.sampler.indexer.AbstractSamplerIndexer;
 import aggregator.sampler.output.DocumentTermsLogFile;
-import aggregator.sampler.output.DocumentsLogFile;
+import aggregator.sampler.output.QueryDocumentsLogFile;
 import aggregator.sampler.output.ExecutionLogFile;
 import aggregator.sampler.output.QueriesLogFile;
 import aggregator.sampler.output.SampledDocumentOutput;
@@ -60,7 +60,7 @@ public class QBS extends AbstractSampler {
 			
 			try(ExecutionLogFile executionLog = ExecutionLogFile.newInstance(logFileName);
 					QueriesLogFile queriesLog = QueriesLogFile.newInstance(analysisFileName);
-					DocumentsLogFile docsLog = DocumentsLogFile.newInstance(analysisFileName)) {
+					QueryDocumentsLogFile docsLog = QueryDocumentsLogFile.newInstance(analysisFileName)) {
 				
 				log.info("Starting sampling proccess...");
 				executionLog.writeLogMessage("Starting sampling with {0} algorithm...", this.getSamplerName());
