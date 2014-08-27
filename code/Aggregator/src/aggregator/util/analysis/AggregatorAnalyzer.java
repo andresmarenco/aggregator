@@ -79,9 +79,8 @@ public class AggregatorAnalyzer extends StopwordAnalyzerBase {
 	    TokenStream tok = new StandardFilter(matchVersion, src);
 	    tok = new LowerCaseFilter(matchVersion, tok);
 	    tok = new SingleCharFilter(matchVersion, tok);
-//	    tok = new NumberFilter(matchVersion, tok);
 	    tok = new StopFilter(matchVersion, tok, stopwords);
-//	    tok = new PorterStemFilter(tok);
+	    tok = new PorterStemFilter(tok);
 	    
 	    return new TokenStreamComponents(src, tok) {
 	      @Override

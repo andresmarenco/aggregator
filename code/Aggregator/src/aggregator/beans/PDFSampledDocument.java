@@ -23,6 +23,7 @@ import aggregator.util.XMLUtils;
 
 public class PDFSampledDocument implements SampledDocument<Document> {
 
+	public static final String ROOT_NAME = "parsedPdf";
 	private static final long serialVersionUID = 201408190421L;
 	
 	private String id;
@@ -39,7 +40,7 @@ public class PDFSampledDocument implements SampledDocument<Document> {
 	
 	
 	/**
-	 * Creates a {@code XMLSampledDocument} reading the given path
+	 * Creates a {@code PDFSampledDocument} reading the given path
 	 * @param path Document path
 	 */
 	public PDFSampledDocument(Path path) {
@@ -92,56 +93,56 @@ public class PDFSampledDocument implements SampledDocument<Document> {
 			PDFParser parser = new PDFParser(new FileInputStream(path.toFile()));
 			parser.parse();
 			
-			COSDocument cosDoc = parser.getDocument();
-			PDFTextStripper pdfStripper = new PDFTextStripper();
-			
-			PDDocument pdDoc = new PDDocument(cosDoc);
-			String parsedText = pdfStripper.getText(pdDoc);
-			
-			PDDocumentInformation info = pdDoc.getDocumentInformation();
-			
-			DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
-			DocumentBuilder dbuilder = dbf.newDocumentBuilder();
-			
-			this.document = dbuilder.newDocument();
-			
-			Node root = document.createElement("parsedPdf");
-			document.appendChild(root);
-			
-			Node nodeId = document.createElement("id");
-			nodeId.setTextContent(id);
-			root.appendChild(nodeId);
-			
-			if(StringUtils.isNotBlank(info.getTitle())) {
-				Node nodeTitle = document.createElement("title");
-				nodeTitle.setTextContent(info.getTitle());
-				root.appendChild(nodeTitle);
+			try(COSDocument cosDoc = parser.getDocument();
+					PDDocument pdDoc = new PDDocument(cosDoc))
+			{
+				PDFTextStripper pdfStripper = new PDFTextStripper();
+				String parsedText = pdfStripper.getText(pdDoc);
+				
+				PDDocumentInformation info = pdDoc.getDocumentInformation();
+				
+				DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+				DocumentBuilder dbuilder = dbf.newDocumentBuilder();
+				
+				this.document = dbuilder.newDocument();
+				
+				Node root = document.createElement(ROOT_NAME);
+				document.appendChild(root);
+				
+				Node nodeId = document.createElement("id");
+				nodeId.setTextContent(id);
+				root.appendChild(nodeId);
+				
+				if(StringUtils.isNotBlank(info.getTitle())) {
+					Node nodeTitle = document.createElement("title");
+					nodeTitle.setTextContent(info.getTitle());
+					root.appendChild(nodeTitle);
+				}
+				
+				if(StringUtils.isNotBlank(info.getAuthor())) {
+					Node nodeAuthor = document.createElement("author");
+					nodeAuthor.setTextContent(info.getAuthor());
+					root.appendChild(nodeAuthor);
+				}
+				
+				if(StringUtils.isNotBlank(info.getSubject())) {
+					Node nodeSubject = document.createElement("subject");
+					nodeSubject.setTextContent(info.getSubject());
+					root.appendChild(nodeSubject);
+				}
+				
+				if(StringUtils.isNotBlank(info.getKeywords())) {
+					Node nodeKeywords = document.createElement("keywords");
+					nodeKeywords.setTextContent(info.getKeywords());
+					root.appendChild(nodeKeywords);
+				}
+				
+				if(StringUtils.isNotBlank(parsedText)) {
+					Node nodeText = document.createElement("text");
+					nodeText.setTextContent(parsedText);
+					root.appendChild(nodeText);
+				}
 			}
-			
-			if(StringUtils.isNotBlank(info.getAuthor())) {
-				Node nodeAuthor = document.createElement("author");
-				nodeAuthor.setTextContent(info.getAuthor());
-				root.appendChild(nodeAuthor);
-			}
-			
-			if(StringUtils.isNotBlank(info.getSubject())) {
-				Node nodeSubject = document.createElement("subject");
-				nodeSubject.setTextContent(info.getSubject());
-				root.appendChild(nodeSubject);
-			}
-			
-			if(StringUtils.isNotBlank(info.getKeywords())) {
-				Node nodeKeywords = document.createElement("keywords");
-				nodeKeywords.setTextContent(info.getKeywords());
-				root.appendChild(nodeKeywords);
-			}
-			
-			if(StringUtils.isNotBlank(parsedText)) {
-				Node nodeText = document.createElement("text");
-				nodeText.setTextContent(parsedText);
-				root.appendChild(nodeText);
-			}
-			
 		}
 		catch(Exception ex) {
 			log.error("Bad formed PDF. Couldn't fix.");

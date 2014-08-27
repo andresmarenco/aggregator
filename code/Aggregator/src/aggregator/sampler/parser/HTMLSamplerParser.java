@@ -22,8 +22,10 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
+import aggregator.beans.DOCSampledDocument;
 import aggregator.beans.HTMLIndexParserConfig;
 import aggregator.beans.IndexParserConfig;
+import aggregator.beans.PDFSampledDocument;
 import aggregator.beans.SampledDocument;
 import aggregator.beans.XMLSampledDocument;
 import aggregator.util.IterableNodeList;
@@ -35,6 +37,8 @@ public class HTMLSamplerParser implements SamplerParser {
 	public static final String BODY_KEY = "body";
 	public static final String META_PREFIX_KEY = "meta";
 	public static final String BIBTEX_PREFIX_KEY = "bibtex";
+	public static final String PDF_PREFIX_KEY = "pdf";
+	public static final String DOC_PREFIX_KEY = "doc";
 	
 	private HTMLIndexParserConfig config;
 	private XMLUtils xmlUtils;
@@ -81,30 +85,58 @@ public class HTMLSamplerParser implements SamplerParser {
 		List<Entry<String, String>> result = new ArrayList<Entry<String,String>>();
 		try
 		{
-			if(document instanceof XMLSampledDocument) {
-				XMLSampledDocument xmlDoc = (XMLSampledDocument)document;
-				if(config.isRemoveScripts()) {
-					this.removeScripts(xmlDoc.getDocument());
+			if((document != null) && (document.getClass() != null)) {
+				// .PDF Document
+				if(document instanceof PDFSampledDocument) {
+					PDFSampledDocument pdfDoc = (PDFSampledDocument)document;
+					if(config.isReadPDF()) {
+						result.addAll(this.getPDFText(pdfDoc.getDocument()));
+					}
 				}
 				
-				if(config.isReadTitle()) {
-					result.add(new MutablePair<String, String>(TITLE_KEY, this.getTitle(xmlDoc.getDocument())));
+				// .DOC document
+				if(document instanceof DOCSampledDocument) {
+					DOCSampledDocument docDoc = (DOCSampledDocument)document;
+					if(config.isReadPDF()) {
+						result.addAll(this.getDOCText(docDoc.getDocument()));
+					}
 				}
 				
-				if(config.isReadMetaTags()) {
-					result.addAll(this.getMetaTags(xmlDoc.getDocument()));
-				}
-				
-				if(config.isReadBody()) {
-					result.add(new MutablePair<String, String>(BODY_KEY, this.getBody(xmlDoc.getDocument())));
-				}
-				
-				if(StringUtils.isNotBlank(config.getReadContents())) {
-					result.addAll(this.getExtraText(xmlDoc.getDocument(), config.getReadContents()));
-				}
-				
-				if(StringUtils.isNotBlank(config.getReadBibTeX())) {
-					result.addAll(this.getBibTeX(xmlDoc.getDocument(), config.getReadBibTeX()));
+				// Regular HTML document
+				if(document instanceof XMLSampledDocument) {
+					if(StringUtils.isNotBlank(config.getResetDocument())) {
+						String replaceDoc = xmlUtils.executeXPath(document.getDocument(), config.getResetDocument(), String.class);
+						if(StringUtils.isNotBlank(replaceDoc)) {
+							document = new XMLSampledDocument(document.getId());
+							document.deserialize(replaceDoc);
+						}
+					}
+					
+					XMLSampledDocument xmlDoc = (XMLSampledDocument)document;
+					
+					if(config.isRemoveScripts()) {
+						this.removeScripts(xmlDoc.getDocument());
+					}
+					
+					if(config.isReadTitle()) {
+						result.add(new MutablePair<String, String>(TITLE_KEY, this.getTitle(xmlDoc.getDocument())));
+					}
+					
+					if(config.isReadMetaTags()) {
+						result.addAll(this.getMetaTags(xmlDoc.getDocument()));
+					}
+					
+					if(config.isReadBody()) {
+						result.add(new MutablePair<String, String>(BODY_KEY, this.getBody(xmlDoc.getDocument())));
+					}
+					
+					if(StringUtils.isNotBlank(config.getReadContents())) {
+						result.addAll(this.getExtraText(xmlDoc.getDocument(), config.getReadContents()));
+					}
+					
+					if(StringUtils.isNotBlank(config.getReadBibTeX())) {
+						result.addAll(this.getBibTeX(xmlDoc.getDocument(), config.getReadBibTeX()));
+					}
 				}
 			}
 		}
@@ -151,11 +183,21 @@ public class HTMLSamplerParser implements SamplerParser {
 		List<Entry<String, String>> result = new ArrayList<Entry<String,String>>();
 		NodeList nodeList = xmlUtils.executeXPath(document, ".//meta", NodeList.class);
 		for(Node node : new IterableNodeList(nodeList)) {
-			Node name = node.getAttributes().getNamedItem("name");
 			Node content = node.getAttributes().getNamedItem("content");
-			
-			if(StringUtils.isNotBlank(content.getTextContent())) {
-				result.add(new MutablePair<String, String>(MessageFormat.format("{0}:{1}", META_PREFIX_KEY, name.getTextContent().trim()), content.getTextContent().trim()));
+			if((content != null) && (StringUtils.isNotBlank(content.getTextContent()))) {
+				String nameText = "";
+				
+				for(int i = 0; i < node.getAttributes().getLength(); i++) {
+					Node attribute = node.getAttributes().item(i);
+					if(!attribute.getNodeName().equalsIgnoreCase("content")) continue;
+					nameText = attribute.getTextContent();
+					
+					if((attribute.getNodeName().equalsIgnoreCase("name")) || (attribute.getNodeName().equalsIgnoreCase("property"))) {
+						break;
+					}
+				}
+				
+				result.add(new MutablePair<String, String>(MessageFormat.format("{0}:{1}", META_PREFIX_KEY, nameText), content.getTextContent().trim()));
 			}
 		}
 		
@@ -191,10 +233,52 @@ public class HTMLSamplerParser implements SamplerParser {
 	 * @param document Origin document
 	 */
 	private void removeScripts(Document document) {
-		NodeList nodeList = xmlUtils.executeXPath(document, ".//script", NodeList.class);
+		NodeList nodeList = xmlUtils.executeXPath(document, ".//script|.//style", NodeList.class);
 		for(Node node : new IterableNodeList(nodeList)) {
 			node.getParentNode().removeChild(node);
 		}
+	}
+	
+	
+	
+	
+	/**
+	 * Gets the contents of the given DOC Document
+	 * @param document Origin document
+	 * @return List with the text contents
+	 */
+	private List<Entry<String, String>> getDOCText(Document document) {
+		Node rootNode = xmlUtils.executeXPath(document, ".//" + DOCSampledDocument.ROOT_NAME, Node.class);
+		List<Entry<String, String>> result = new ArrayList<Entry<String,String>>();
+		for(Node node : new IterableNodeList(rootNode.getChildNodes())) {
+			String content = node.getTextContent();
+			if(StringUtils.isNotBlank(content)) {
+				result.add(new MutablePair<String, String>(MessageFormat.format("{0}:{1}", DOC_PREFIX_KEY, node.getNodeName()), content.replaceAll("\\s+", " ").trim()));
+			}
+		}
+		
+		return result;
+	}
+	
+	
+	
+	
+	/**
+	 * Gets the contents of the given PDF Document
+	 * @param document Origin document
+	 * @return List with the text contents
+	 */
+	private List<Entry<String, String>> getPDFText(Document document) {
+		Node rootNode = xmlUtils.executeXPath(document, ".//" + PDFSampledDocument.ROOT_NAME, Node.class);
+		List<Entry<String, String>> result = new ArrayList<Entry<String,String>>();
+		for(Node node : new IterableNodeList(rootNode.getChildNodes())) {
+			String content = node.getTextContent();
+			if(StringUtils.isNotBlank(content)) {
+				result.add(new MutablePair<String, String>(MessageFormat.format("{0}:{1}", PDF_PREFIX_KEY, node.getNodeName()), content.replaceAll("\\s+", " ").trim()));
+			}
+		}
+		
+		return result;
 	}
 	
 	

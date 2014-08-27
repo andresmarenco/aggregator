@@ -14,6 +14,7 @@ import java.text.DateFormat;
 import java.text.MessageFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
 import java.util.List;
@@ -43,6 +44,7 @@ import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.store.Directory;
+import org.apache.lucene.store.NIOFSDirectory;
 import org.apache.lucene.store.RAMDirectory;
 import org.apache.lucene.util.Version;
 import org.apache.pdfbox.cos.COSDocument;
@@ -50,6 +52,9 @@ import org.apache.pdfbox.pdfparser.PDFParser;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDDocumentInformation;
 import org.apache.pdfbox.util.PDFTextStripper;
+import org.apache.poi.hpsf.Property;
+import org.apache.poi.hwpf.HWPFDocument;
+import org.apache.poi.hwpf.extractor.WordExtractor;
 import org.jbibtex.BibTeXDatabase;
 import org.jbibtex.BibTeXEntry;
 import org.jbibtex.BibTeXParser;
@@ -65,19 +70,24 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 
+import aggregator.beans.DOCSampledDocument;
 import aggregator.beans.PDFSampledDocument;
 import aggregator.beans.QueryResult;
 import aggregator.beans.SampledDocument;
 import aggregator.beans.Vertical;
 import aggregator.beans.VerticalCategory;
+import aggregator.beans.VerticalCollection;
+import aggregator.beans.VerticalCollection.VerticalCollectionData;
 import aggregator.beans.VerticalConfig;
 import aggregator.beans.XMLSampledDocument;
 import aggregator.dataaccess.ConnectionManager;
 import aggregator.dataaccess.DirectConnectionManager;
 import aggregator.dataaccess.VerticalDAO;
 import aggregator.sampler.AbstractSampler;
+import aggregator.sampler.analysis.DatabaseIntermediateResults;
 import aggregator.sampler.analysis.DocumentAnalysis;
 import aggregator.sampler.analysis.sizeestimation.CaptureHistory;
+import aggregator.sampler.analysis.sizeestimation.CollectionFactorEstimation;
 import aggregator.sampler.analysis.sizeestimation.SampleResample;
 import aggregator.sampler.indexer.AbstractSamplerIndexer;
 import aggregator.sampler.indexer.LuceneSamplerIndexer;
@@ -89,7 +99,12 @@ import aggregator.util.CommonUtils;
 import aggregator.util.IterableNodeList;
 import aggregator.util.XMLUtils;
 import aggregator.util.analysis.AggregatorAnalyzer;
+import aggregator.util.analysis.AggregatorTokenizerAnalyzer;
 import aggregator.util.delay.RandomDelay;
+import aggregator.verticalselection.BasicMaxVerticalSelection;
+import aggregator.verticalselection.RankVerticalSelection;
+import aggregator.verticalselection.SizeRankVerticalSelection;
+import aggregator.verticalselection.VerticalSelection;
 import aggregator.verticalwrapper.AbstractVerticalWrapper;
 import aggregator.verticalwrapper.VerticalWrapperController;
 
@@ -288,7 +303,93 @@ public class Main {
 			
 //			file.
 			
+//			FileInputStream fis = new FileInputStream("/home/andres/aggregator/sample/FW13-sample-docs/e075/5000_06.doc");
+//			HWPFDocument doc = new HWPFDocument(fis);
+//			WordExtractor word = new WordExtractor(doc);
+//			
+////			System.out.println(word.getDocSummaryInformation().);
+//			for(String s : word.getParagraphText()) {
+//				System.out.println(s);
+//			}
 			
+//			for(Property p : word.getDocSummaryInformation().getProperties()) {
+//				System.out.println(p.getID() + "  " + p.getValue());
+//			}
+			
+			
+			
+//			List<String> v = new ArrayList<String>();
+//			for(int i = 180; i<=185; i++) {
+//				v.add(MessageFormat.format("e{0}", String.valueOf(i)));
+//			}
+			
+//////			
+			VerticalDAO dao = new VerticalDAO(DirectConnectionManager.getInstance());
+			VerticalCollection collection = dao.loadVerticalCollection("FW13");
+			
+//			for(VerticalCollectionData data : collection.getVerticals()) {
+////				if(data.getVertical().getId().equalsIgnoreCase("orgprints")) {
+//				if(data.getVerticalCollectionId().equalsIgnoreCase("e023")) {
+////				if(v.contains(data.getVerticalCollectionId())) {
+//					DocumentAnalysis docAnalysis = new DocumentAnalysis(data.getVertical());
+//					docAnalysis.analyzeHTMLSample(MessageFormat.format("{0}-sample-docs/{1}", collection.getId(), data.getVerticalCollectionId()));
+//				}
+//			}
+			
+//			CollectionFactorEstimation size = new CollectionFactorEstimation(collection);
+//			size.estimateSize(MessageFormat.format("{0}-sample-docs", collection.getId()));
+			
+			
+			AbstractSamplerIndexer indexer = AbstractSamplerIndexer.newInstance();
+			indexer.storeIndex(MessageFormat.format("{0}-sample-docs", collection.getId()), collection);
+//			
+//			
+//			VerticalSelection selection = new SizeRankVerticalSelection(collection);
+////			selection.search("LHC collision publications");
+//			selection.testQueries("sizerankmodel");
+//			
+//			selection.close();
+
+			
+			
+//			// Now search the index:
+//			Directory index = new NIOFSDirectory(CommonUtils.getIndexPath().resolve(collection.getId()).toFile());
+//		    DirectoryReader ireader = DirectoryReader.open(index);
+//		    IndexSearcher isearcher = new IndexSearcher(ireader);
+//////		    // Parse a simple query that searches for "text":
+//		    QueryParser parser = new QueryParser(Version.LUCENE_4_9, "text", new AggregatorAnalyzer(Version.LUCENE_4_9));
+//		    
+//		    Query query = parser.parse("Graphene");
+//		    ScoreDoc[] hits = isearcher.search(query, null, Integer.MAX_VALUE).scoreDocs;
+//////		    assertEquals(1, hits.length);
+//		    System.out.println("TOTAL: " + hits.length);
+//		    // Iterate through the results:
+//		    for (int i = 0; i < hits.length; i++) {
+//		    	 org.apache.lucene.document.Document hitDoc = isearcher.doc(hits[i].doc);
+//		    	 System.out.println("This is the text to be indexed. " + hits[i].score + "  " + hitDoc.get("docName") + "  " + hitDoc.get("vertical"));
+////		      assertEquals("This is the text to be indexed.", hitDoc.get("fieldname"));
+//		    }
+//		    ireader.close();
+//		    index.close();
+			
+			
+			
+			
+//			DatabaseIntermediateResults ir = new DatabaseIntermediateResults(dao.loadVertical("ncsu"));
+//			ir.addDocumentTerms("doc1", Arrays.asList((new String[] { "t1", "t2" })));
+//			ir.addDocumentTerms("doc2", Arrays.asList((new String[] { "t4", "t2", "2f" })));
+//			
+//			ir.dumpDocumentTerms("FW13-sample-docs/e030/fsd.{docType}");
+//			// Get current size of heap in bytes
+//			long heapSize = Runtime.getRuntime().totalMemory(); 
+//
+//			// Get maximum size of heap in bytes. The heap cannot grow beyond this size.// Any attempt will result in an OutOfMemoryException.
+//			long heapMaxSize = Runtime.getRuntime().maxMemory();
+//
+//			 // Get amount of free memory within the heap in bytes. This size will increase // after garbage collection and decrease as new objects are created.
+//			long heapFreeSize = Runtime.getRuntime().freeMemory(); 
+//			
+//			System.out.println(heapSize + "  " + heapMaxSize + "  " + heapFreeSize);
 //			
 			
 			
@@ -341,11 +442,11 @@ public class Main {
 			
 //			VerticalDAO dao = new VerticalDAO(DirectConnectionManager.getInstance());
 //			Vertical vertical = dao.loadVertical("arxiv");
-//			
+////			
 //			VerticalWrapperController wc = VerticalWrapperController.getInstance();
-//			AbstractVerticalWrapper wrapper = wc.createVerticalWrapper(vertical);
-			
-//			SampledDocument<?> xml = new XMLSampledDocument(FileSystems.getDefault().getPath("/home/andres/sample/arxiv/000000_20140723055053.html"));
+////			AbstractVerticalWrapper wrapper = wc.createVerticalWrapper(vertical);
+//			
+//			SampledDocument<?> xml = new PDFSampledDocument(FileSystems.getDefault().getPath("/home/andres/aggregator/sample/FW13-sample-docs/e075/5257_03.pdf"));
 //			SamplerParser sp = wc.getVerticalConfig(vertical).newIndexParserInstance();
 //			
 //			for(Map.Entry<String, String> pair : sp.parseDocument(xml)) {
@@ -408,19 +509,19 @@ public class Main {
 			
 			
 //			
-////			SampledDocument<?> xml = new XMLSampledDocument(FileSystems.getDefault().getPath("/home/andres/aggregator/sample/arxiv/000000_20140727042350.html"));
-////			AbstractSamplerIndexer asi = new LuceneSamplerIndexer(vertical);
+//			SampledDocument<?> xml = new XMLSampledDocument(FileSystems.getDefault().getPath("/home/andres/aggregator/sample/FW13-sample-docs/e027/5005_04.html"));
+//////			AbstractSamplerIndexer asi = new LuceneSamplerIndexer(vertical);
+//////			
+//////			asi.tokenize(xml);
 ////			
-////			asi.tokenize(xml);
+//////			AbstractSampler as = AbstractSampler.newInstance(vertical);
+//////			as.execute();
+////			
+////			VerticalDAO dao = new VerticalDAO(DirectConnectionManager.getInstance());
+//			Vertical vertical = dao.loadVertical("columbus");
 //			
-////			AbstractSampler as = AbstractSampler.newInstance(vertical);
-////			as.execute();
-//			
-//			VerticalDAO dao = new VerticalDAO(DirectConnectionManager.getInstance());
-//			Vertical vertical = dao.loadVertical("msacademic");
-//			
-////			VerticalWrapperController vw = VerticalWrapperController.getInstance();
-////			VerticalConfig vc = vw.getVerticalConfig(vertical);
+//			VerticalWrapperController vw = VerticalWrapperController.getInstance();
+//			VerticalConfig vc = vw.getVerticalConfig(vertical);
 //			
 //			DocumentAnalysis docAnalysis = new DocumentAnalysis(vertical);
 //			docAnalysis.analyzeHTMLSample("FW13-sample-docs/e010");

@@ -4,18 +4,18 @@ import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.text.MessageFormat;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
+
 
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 
+
 import aggregator.beans.AnalysisConfig;
+import aggregator.beans.DOCSampledDocument;
 import aggregator.beans.PDFSampledDocument;
 import aggregator.beans.SampledDocument;
 import aggregator.beans.Vertical;
@@ -23,8 +23,6 @@ import aggregator.beans.XMLSampledDocument;
 import aggregator.sampler.indexer.AbstractSamplerIndexer;
 import aggregator.sampler.output.AnalysisExecutionLogFile;
 import aggregator.sampler.output.DocumentAnalysisLogFile;
-import aggregator.sampler.output.DocumentTermsLogFile;
-import aggregator.sampler.output.TFDFLogFile;
 import aggregator.sampler.output.TokensLogFile;
 import aggregator.util.CommonUtils;
 import aggregator.util.XMLUtils;
@@ -65,16 +63,19 @@ public class DocumentAnalysis {
 		long startTime = System.currentTimeMillis();
 		
 		try(AbstractSamplerIndexer samplerIndexer = AbstractSamplerIndexer.newInstance(vertical);
-				AnalysisExecutionLogFile executionLog = AnalysisExecutionLogFile.newInstance(analysisFileName)) {
+				AnalysisExecutionLogFile executionLog = AnalysisExecutionLogFile.newInstance(analysisFileName);
+				IntermediateResults results = new DatabaseIntermediateResults(vertical)) {
+//				IntermediateResults results = new MemoryIntermediateResults()) {
 		
-					
-			log.info("Starting analysis proccess...");
-			executionLog.writeLogMessage("Starting analysis proccess...");
+//			samplerIndexer.setIntermediateResults(results);
+			
+			log.info("Starting analysis process...");
+			executionLog.writeLogMessage("Starting analysis process...");
 			
 			
 			
 			
-			List<Map.Entry<String, List<String>>> documentTerms = new ArrayList<Map.Entry<String,List<String>>>();
+//			List<Map.Entry<String, List<String>>> documentTerms = new ArrayList<Map.Entry<String,List<String>>>();
 			
 			try(TokensLogFile tokens = TokensLogFile.newInstance(analysisFileName);
 					DocumentAnalysisLogFile docAnalysisLogFile = DocumentAnalysisLogFile.newInstance(analysisFileName)) {
@@ -87,9 +88,11 @@ public class DocumentAnalysis {
 					    	doc = new XMLSampledDocument(filePath);
 				    	} else if(filePath.getFileName().toString().endsWith(".pdf")) {
 				    		doc = new PDFSampledDocument(filePath);
+				    	} else if(filePath.getFileName().toString().endsWith(".doc")) {
+				    		doc = new DOCSampledDocument(filePath);
 				    	}
 				    	
-				    	if(doc != null) {
+				    	if((doc != null) && (doc.getDocument() != null)) {
 				    		log.info(MessageFormat.format("Analyzing {0}", filePath));
 				    		executionLog.writeLogMessage("Analyzing {0}", filePath);
 				    		
@@ -97,7 +100,8 @@ public class DocumentAnalysis {
 				    		int foundTermsCount = foundTerms.size();
 				    		int newTermsCount = samplerIndexer.getNewTerms().size();
 				    		
-				    		documentTerms.add(new ImmutablePair<String, List<String>>(doc.getId(), new ArrayList<String>(foundTerms)));
+				    		results.addDocumentTerms(doc.getId(), foundTerms);
+//				    		documentTerms.add(new ImmutablePair<String, List<String>>(doc.getId(), new ArrayList<String>(foundTerms)));
 				    		log.info(MessageFormat.format("Found {0} terms.", foundTerms.size()));
 				    		tokens.writeTokens(foundTerms);
 				    		
@@ -113,14 +117,16 @@ public class DocumentAnalysis {
 			}
 			
 			// Stores the term frequency/document frequency file
-			try(TFDFLogFile tfdfLog = TFDFLogFile.newInstance(analysisFileName)) {
-				tfdfLog.writeTFDFs(samplerIndexer.getUniqueTerms());
-			}
+//			try(TFDFLogFile tfdfLog = TFDFLogFile.newInstance(analysisFileName)) {
+//				tfdfLog.writeTFDFs(samplerIndexer.getUniqueTerms());
+//			}
 			
-			// Stores the document terms list
-			try(DocumentTermsLogFile docTermsLog = DocumentTermsLogFile.newInstance(analysisFileName)) {
-				docTermsLog.writeDocumentTerms(documentTerms);
-			}
+//			// Stores the document terms list
+//			try(DocumentTermsLogFile docTermsLog = DocumentTermsLogFile.newInstance(analysisFileName)) {
+//				docTermsLog.writeDocumentTerms(documentTerms);
+//			}
+			results.dumpDocumentTerms(analysisFileName);
+			results.dumpTFDF(analysisFileName);
 			
 			// Logging statistics
 			long endTime = System.currentTimeMillis();

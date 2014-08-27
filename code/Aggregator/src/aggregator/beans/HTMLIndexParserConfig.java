@@ -8,9 +8,12 @@ import java.util.Properties;
 public class HTMLIndexParserConfig implements IndexParserConfig, Serializable {
 
 	private static final long serialVersionUID = 201407242023L;
+	private static final String PARSER_RESET_DOCUMENT_KEY = "index.parser.resetDocument";
 	private static final String PARSER_READ_TITLE_KEY = "index.parser.readTitle";
 	private static final String PARSER_READ_METATAGS_KEY = "index.parser.readMetaTags";
 	private static final String PARSER_READ_BODY_KEY = "index.parser.readBody";
+	private static final String PARSER_READ_PDF_KEY = "index.parser.readPDF";
+	private static final String PARSER_READ_DOC_KEY = "index.parser.readDOC";
 	private static final String PARSER_REMOVE_SCRIPTS_KEY = "index.parser.removeScripts";
 	private static final String PARSER_REMOVE_NUMBERS_KEY = "index.parser.removeNumbers";
 	private static final String PARSER_READ_CONTENTS_KEY = "index.parser.readContents";
@@ -18,9 +21,12 @@ public class HTMLIndexParserConfig implements IndexParserConfig, Serializable {
 	private static final String PARSER_IGNORE_BIBTEX_KEY = "index.parser.readBibTeX.ignore";
 	private static final String PARSER_STOPWORDS_KEY = "index.parser.stopwords";
 	
+	private String resetDocument;
 	private boolean readTitle;
 	private boolean readMetaTags;
 	private boolean readBody;
+	private boolean readPDF;
+	private boolean readDOC;
 	private boolean removeScripts;
 	private boolean removeNumbers;
 	private String readContents;
@@ -43,9 +49,12 @@ public class HTMLIndexParserConfig implements IndexParserConfig, Serializable {
 	 */
 	public static final HTMLIndexParserConfig newInstance(Properties properties) {
 		HTMLIndexParserConfig config = new HTMLIndexParserConfig();
+		config.setResetDocument(properties.getProperty(PARSER_RESET_DOCUMENT_KEY, "").trim());
 		config.setReadTitle(Boolean.parseBoolean(properties.getProperty(PARSER_READ_TITLE_KEY, "true")));
 		config.setReadMetaTags(Boolean.parseBoolean(properties.getProperty(PARSER_READ_METATAGS_KEY, "true")));
 		config.setReadBody(Boolean.parseBoolean(properties.getProperty(PARSER_READ_BODY_KEY, "true")));
+		config.setReadPDF(Boolean.parseBoolean(properties.getProperty(PARSER_READ_PDF_KEY, "false")));
+		config.setReadDOC(Boolean.parseBoolean(properties.getProperty(PARSER_READ_DOC_KEY, "false")));
 		config.setRemoveScripts(Boolean.parseBoolean(properties.getProperty(PARSER_REMOVE_SCRIPTS_KEY, "true")));
 		config.setRemoveNumbers(Boolean.parseBoolean(properties.getProperty(PARSER_REMOVE_NUMBERS_KEY, "false")));
 		config.setReadContents(properties.getProperty(PARSER_READ_CONTENTS_KEY, "").trim());
@@ -54,6 +63,24 @@ public class HTMLIndexParserConfig implements IndexParserConfig, Serializable {
 		config.setIgnoreBibTeX(Arrays.asList(properties.getProperty(PARSER_IGNORE_BIBTEX_KEY, "").toLowerCase().split("\\|")));
 		
 		return config;
+	}
+
+
+
+	/**
+	 * @return the resetDocument
+	 */
+	public String getResetDocument() {
+		return resetDocument;
+	}
+
+
+
+	/**
+	 * @param resetDocument the resetDocument to set
+	 */
+	public void setResetDocument(String resetDocument) {
+		this.resetDocument = resetDocument;
 	}
 
 
@@ -216,6 +243,42 @@ public class HTMLIndexParserConfig implements IndexParserConfig, Serializable {
 	 */
 	public void setIgnoreBibTeX(List<String> ignoreBibTeX) {
 		this.ignoreBibTeX = ignoreBibTeX;
+	}
+
+
+
+	/**
+	 * @return the readPDF
+	 */
+	public boolean isReadPDF() {
+		return readPDF;
+	}
+
+
+
+	/**
+	 * @param readPDF the readPDF to set
+	 */
+	public void setReadPDF(boolean readPDF) {
+		this.readPDF = readPDF;
+	}
+
+
+
+	/**
+	 * @return the readDOC
+	 */
+	public boolean isReadDOC() {
+		return readDOC;
+	}
+
+
+
+	/**
+	 * @param readDOC the readDOC to set
+	 */
+	public void setReadDOC(boolean readDOC) {
+		this.readDOC = readDOC;
 	}
 	
 	

@@ -1,0 +1,3 @@
+set title ./firstname
+set summary ./lastname
+set id ./@id

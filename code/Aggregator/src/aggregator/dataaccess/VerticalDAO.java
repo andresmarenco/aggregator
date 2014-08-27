@@ -11,6 +11,8 @@ import org.apache.commons.logging.LogFactory;
 
 import aggregator.beans.Vertical;
 import aggregator.beans.VerticalCategory;
+import aggregator.beans.VerticalCollection;
+import aggregator.beans.VerticalCollection.VerticalCollectionData;
 import aggregator.util.DBUtils;
 
 public class VerticalDAO {
@@ -117,5 +119,71 @@ public class VerticalDAO {
 		}
 		
 		return result;
+	}
+	
+	
+	
+	
+	/**
+	 * Loads the collection and its verticals
+	 * @param collectionId Collection Id
+	 * @return Collection data
+	 */
+	public VerticalCollection loadVerticalCollection(String collectionId) {
+		VerticalCollection result = null;
+		try(Connection connection = connectionManager.getConnection())
+		{
+			try(PreparedStatement stmt = connection.prepareStatement("select * from ir_collection where id=?;"
+							+ "select * from ir_vertical_by_collection where collection_id=? order by id")) {
+				
+				stmt.setString(1, collectionId);
+				stmt.setString(2, collectionId);
+				
+				if(stmt.execute()) {
+					try(ResultSet data = stmt.getResultSet()) {
+						if(data.next()) {
+							result = new VerticalCollection();
+							result.setId(collectionId);
+							result.setName(data.getString("name"));
+							result.setVerticals(new ArrayList<VerticalCollectionData>());
+							
+							if(stmt.getMoreResults()) {
+								try(ResultSet verticals = stmt.getResultSet()) {
+									while(verticals.next()) {
+										result.getVerticals().add(
+												new VerticalCollectionData(
+														verticals.getString("id"),
+														new Vertical(verticals.getString("vertical_id")),
+														verticals.getDouble("size_factor")));
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+			
+		}
+		catch(SQLException ex) {
+			log.error(ex.getMessage(), ex);
+		}
+		
+		return result;
+	}
+	
+	
+	
+	public void updateSizeFactor(String collectionId, String verticalId, double sizeFactor) {
+		try(Connection connection = connectionManager.getConnection()) {
+			try(PreparedStatement stmt = connection.prepareStatement("update ir_vertical_by_collection set size_factor = ? where vertical_id=? and collection_id=?")) {
+				stmt.setDouble(1, sizeFactor);
+				stmt.setString(2, verticalId);
+				stmt.setString(3, collectionId);
+				stmt.execute();
+			}
+		}
+		catch(SQLException ex) {
+			log.error(ex.getMessage(), ex);
+		}
 	}
 }

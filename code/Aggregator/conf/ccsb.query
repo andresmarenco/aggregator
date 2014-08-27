@@ -1,0 +1,3 @@
+POST /csbib HTTP/1.1
+Host: liinwww.ira.uka.de
+Data: query {%QUERY}

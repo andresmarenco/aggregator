@@ -1,0 +1,10 @@
+LIST result //dd[./div/div/a]
+FOREACH result
+ADDRESULT
+SET id substring-after(./preceding-sibling::dt[1]//span[@class='list-identifier']/a[@title='Abstract'], ':')
+SET title .//div[@class='list-title']/text()[2]
+SETLIST authors .//div[@class='list-authors']/a
+SETLIST keywords .//div[@class='list-subjects']/node()[position()>2]
+SET info .//div[@class='list-comments']/node()[position()>2]
+SPLIT keywords ;
+ENDFOR

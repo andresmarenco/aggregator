@@ -1,0 +1,9 @@
+LIST result //table[./tbody/tr/td/a]
+FOREACH result
+ADDRESULT
+SET id string(.//td[@class='biblinks']/a[contains(., 'BibTeX')]/@href)
+SET title .//span[@class='b_title']
+SETLIST authors .//span[@class='b_title']/preceding-sibling::node()
+SPLIT authors \s+and\s+
+SETLIST info .//td[2]/br[last()]/following-sibling::node()
+ENDFOR

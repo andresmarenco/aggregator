@@ -17,6 +17,18 @@ public class Vertical implements Serializable {
 	 */
 	public Vertical() {
 	}
+	
+	
+	/**
+	 * Constructor with Id
+	 * @param id Vertical Id
+	 */
+	public Vertical(String id) {
+		super();
+		this.id = id;
+	}
+
+
 
 	/**
 	 * @return the id

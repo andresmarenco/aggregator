@@ -45,13 +45,21 @@ public class XMLSampledDocument implements SampledDocument<Document> {
 
 	@Override
 	public Document deserialize(String document) {
-		DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
-		DocumentBuilder dBuilder;
+//		DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
+//		DocumentBuilder dBuilder;
+//		
+//		try
+//		{
+//			dBuilder = dbFactory.newDocumentBuilder();
+//			this.document = dBuilder.parse(new InputSource(new StringReader(document)));
+//		}
+//		catch(Exception ex) {
+//			log.error(ex.getMessage(), ex);
+//		}
 		
 		try
 		{
-			dBuilder = dbFactory.newDocumentBuilder();
-			this.document = dBuilder.parse(new InputSource(new StringReader(document)));
+			this.document = DOMBuilder.jsoup2DOM(Jsoup.parse(document));
 		}
 		catch(Exception ex) {
 			log.error(ex.getMessage(), ex);
