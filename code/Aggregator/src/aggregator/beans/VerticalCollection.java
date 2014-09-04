@@ -121,6 +121,7 @@ public class VerticalCollection implements Serializable {
 		private String verticalCollectionId;
 		private Vertical vertical;
 		private double sizeFactor;
+		private int sampleSize;
 		
 		/**
 		 * Default Constructor
@@ -144,12 +145,14 @@ public class VerticalCollection implements Serializable {
 		 * @param verticalCollectionId Vertical collection Id
 		 * @param vertical Vertical
 		 * @param sizeFactor Size Factor
+		 * @param sampleSize Sample Size
 		 */
-		public VerticalCollectionData(String verticalCollectionId, Vertical vertical, double sizeFactor) {
+		public VerticalCollectionData(String verticalCollectionId, Vertical vertical, double sizeFactor, int sampleSize) {
 			super();
 			this.verticalCollectionId = verticalCollectionId;
 			this.vertical = vertical;
 			this.sizeFactor = sizeFactor;
+			this.sampleSize = sampleSize;
 		}
 
 
@@ -194,6 +197,20 @@ public class VerticalCollection implements Serializable {
 		 */
 		public void setSizeFactor(double sizeFactor) {
 			this.sizeFactor = sizeFactor;
+		}
+
+		/**
+		 * @return the sampleSize
+		 */
+		public int getSampleSize() {
+			return sampleSize;
+		}
+
+		/**
+		 * @param sampleSize the sampleSize to set
+		 */
+		public void setSampleSize(int sampleSize) {
+			this.sampleSize = sampleSize;
 		}
 	}
 }

@@ -17,9 +17,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -35,17 +37,32 @@ import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.lucene.document.Field;
+import org.apache.lucene.document.StringField;
 import org.apache.lucene.document.TextField;
 import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig;
+import org.apache.lucene.index.MultiDocsEnum;
+import org.apache.lucene.index.MultiFields;
+import org.apache.lucene.index.Term;
+import org.apache.lucene.index.Terms;
+import org.apache.lucene.index.TermsEnum;
+import org.apache.lucene.queryparser.classic.MultiFieldQueryParser;
 import org.apache.lucene.queryparser.classic.QueryParser;
+import org.apache.lucene.queryparser.classic.QueryParser.Operator;
+import org.apache.lucene.search.BooleanClause;
+import org.apache.lucene.search.BooleanClause.Occur;
+import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.search.IndexSearcher;
+import org.apache.lucene.search.PowTermQuery;
+import org.apache.lucene.search.ProductBooleanQuery;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.ScoreDoc;
+import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.NIOFSDirectory;
 import org.apache.lucene.store.RAMDirectory;
+import org.apache.lucene.util.BytesRef;
 import org.apache.lucene.util.Version;
 import org.apache.pdfbox.cos.COSDocument;
 import org.apache.pdfbox.pdfparser.PDFParser;
@@ -55,6 +72,7 @@ import org.apache.pdfbox.util.PDFTextStripper;
 import org.apache.poi.hpsf.Property;
 import org.apache.poi.hwpf.HWPFDocument;
 import org.apache.poi.hwpf.extractor.WordExtractor;
+import org.apache.poi.hwpf.model.FieldsDocumentPart;
 import org.jbibtex.BibTeXDatabase;
 import org.jbibtex.BibTeXEntry;
 import org.jbibtex.BibTeXParser;
@@ -102,9 +120,15 @@ import aggregator.util.analysis.AggregatorAnalyzer;
 import aggregator.util.analysis.AggregatorTokenizerAnalyzer;
 import aggregator.util.delay.RandomDelay;
 import aggregator.verticalselection.BasicMaxVerticalSelection;
+import aggregator.verticalselection.BasicMeanVerticalSelection;
+import aggregator.verticalselection.BasicSumVerticalSelection;
+import aggregator.verticalselection.ExplainSelectionModel;
+import aggregator.verticalselection.UiSDocumentCentricModel;
+import aggregator.verticalselection.UiSDocumentCentricSimilarity;
 import aggregator.verticalselection.RankVerticalSelection;
+import aggregator.verticalselection.SizeMaxVerticalSelection;
 import aggregator.verticalselection.SizeRankVerticalSelection;
-import aggregator.verticalselection.VerticalSelection;
+import aggregator.verticalselection.AbstractSelectionModel;
 import aggregator.verticalwrapper.AbstractVerticalWrapper;
 import aggregator.verticalwrapper.VerticalWrapperController;
 
@@ -327,6 +351,248 @@ public class Main {
 			VerticalDAO dao = new VerticalDAO(DirectConnectionManager.getInstance());
 			VerticalCollection collection = dao.loadVerticalCollection("FW13");
 			
+//			AbstractSamplerIndexer indexer = AbstractSamplerIndexer.newInstance();
+//			indexer.storeIndex(MessageFormat.format("{0}-sample-docs", collection.getId()), collection);
+				
+			AbstractSelectionModel selection = AbstractSelectionModel.newInstance(collection);
+//			AbstractSelectionModel explain = new ExplainSelectionModel(selection);
+//			explain.execute("swahili dishes");
+			
+			
+			selection.testQueries();
+			selection.close();
+			
+//			dao.updateSampleSize(collection.getId(), "4shared", 10);
+			
+			
+			
+//			Analyzer analyzer = new AggregatorAnalyzer(CommonUtils.LUCENE_VERSION);
+//			Directory index = new RAMDirectory();
+//			IndexWriterConfig config = new IndexWriterConfig(CommonUtils.LUCENE_VERSION, analyzer);
+//			config.setSimilarity(new UiSDocumentCentricSimilarity());
+//			
+//			
+//			IndexWriter writer = new IndexWriter(index, config);
+//			
+//			org.apache.lucene.document.Document indexDoc = new org.apache.lucene.document.Document();
+//			indexDoc.add(new TextField(AbstractSamplerIndexer.INDEX_CONTENTS_FIELD,
+//					"text document sample data file text document read index cup scissors sting song the police"
+//					, Field.Store.NO));
+//			indexDoc.add(new StringField(AbstractSamplerIndexer.INDEX_DOC_NAME_FIELD, "d1", Field.Store.YES));
+//			indexDoc.add(new StringField(AbstractSamplerIndexer.INDEX_VERTICAL_FIELD, "v1", Field.Store.YES));
+//			
+//			writer.addDocument(indexDoc);
+//			
+//			
+//			
+//			indexDoc = new org.apache.lucene.document.Document();
+//			indexDoc.add(new TextField(AbstractSamplerIndexer.INDEX_CONTENTS_FIELD,
+//					"song text juice guitar solo paper pencil text title author title many years among sample"
+//					, Field.Store.NO));
+//			indexDoc.add(new StringField(AbstractSamplerIndexer.INDEX_DOC_NAME_FIELD, "d2", Field.Store.YES));
+//			indexDoc.add(new StringField(AbstractSamplerIndexer.INDEX_VERTICAL_FIELD, "v1", Field.Store.YES));
+//			
+//			writer.addDocument(indexDoc);
+//			
+//			
+//			
+//			indexDoc = new org.apache.lucene.document.Document();
+//			indexDoc.add(new TextField(AbstractSamplerIndexer.INDEX_CONTENTS_FIELD,
+//					"remember test data walk play youtube data data she gave thought seems remember"
+//					, Field.Store.NO));
+//			indexDoc.add(new StringField(AbstractSamplerIndexer.INDEX_DOC_NAME_FIELD, "d3", Field.Store.YES));
+//			indexDoc.add(new StringField(AbstractSamplerIndexer.INDEX_VERTICAL_FIELD, "v1", Field.Store.YES));
+//			
+//			writer.addDocument(indexDoc);
+//			
+//			
+//			// Vertical 2
+//			indexDoc = new org.apache.lucene.document.Document();
+//			indexDoc.add(new TextField(AbstractSamplerIndexer.INDEX_CONTENTS_FIELD,
+//					"song text juice guitar solo paper pencil text title author tuesday mind mind fine days"
+//					, Field.Store.NO));
+//			indexDoc.add(new StringField(AbstractSamplerIndexer.INDEX_DOC_NAME_FIELD, "d1", Field.Store.YES));
+//			indexDoc.add(new StringField(AbstractSamplerIndexer.INDEX_VERTICAL_FIELD, "v2", Field.Store.YES));
+//			
+//			writer.addDocument(indexDoc);
+//			
+//			
+//			
+//			indexDoc = new org.apache.lucene.document.Document();
+//			indexDoc.add(new TextField(AbstractSamplerIndexer.INDEX_CONTENTS_FIELD,
+//					"remember test data thought remember sunday late talk cook food food remember"
+//					, Field.Store.NO));
+//			indexDoc.add(new StringField(AbstractSamplerIndexer.INDEX_DOC_NAME_FIELD, "d2", Field.Store.YES));
+//			indexDoc.add(new StringField(AbstractSamplerIndexer.INDEX_VERTICAL_FIELD, "v2", Field.Store.YES));
+//			
+//			writer.addDocument(indexDoc);
+//			
+//			
+//			
+//			indexDoc = new org.apache.lucene.document.Document();
+//			indexDoc.add(new TextField(AbstractSamplerIndexer.INDEX_CONTENTS_FIELD,
+//					"remember remember sunday late talk cook food food other other other sunday sunday aggregator remember"
+//					, Field.Store.NO));
+//			indexDoc.add(new StringField(AbstractSamplerIndexer.INDEX_DOC_NAME_FIELD, "d3", Field.Store.YES));
+//			indexDoc.add(new StringField(AbstractSamplerIndexer.INDEX_VERTICAL_FIELD, "v2", Field.Store.YES));
+//			
+//			writer.addDocument(indexDoc);
+//			
+//			
+//			
+//			writer.close();
+//			
+//			
+//			
+//			DirectoryReader ireader = DirectoryReader.open(index);
+//			IndexSearcher searcher = new IndexSearcher(ireader);
+//			UiSDocumentCentricSimilarity dcs = new UiSDocumentCentricSimilarity();
+//			
+//			searcher.setSimilarity(dcs);
+//			
+////			MultiFields.getTerms(ireader, AbstractSamplerIndexer.INDEX_TEXT_FIELD).
+//			
+////			System.out.println(MultiFields.getTerms(ireader, AbstractSamplerIndexer.INDEX_TEXT_FIELD));
+//			
+////			TermsEnum termEnum = MultiFields.getTerms(ireader, AbstractSamplerIndexer.INDEX_TEXT_FIELD).iterator(null);
+////			BytesRef bytesRef;
+////	        while ((bytesRef = termEnum.next()) != null) {
+////	        	System.out.println(bytesRef.utf8ToString());
+////	        }
+//			
+//			
+//			
+//			System.out.println("\n\n\nQUERYING");
+//			
+//			
+//			QueryParser parser = new QueryParser(CommonUtils.LUCENE_VERSION, AbstractSamplerIndexer.INDEX_CONTENTS_FIELD, analyzer);
+//			parser.setDefaultOperator(Operator.AND);
+//			
+////			QueryParser parser = new MultiFieldQueryParser(CommonUtils.LUCENE_VERSION, new String[] {AbstractSamplerIndexer.INDEX_TEXT_FIELD, AbstractSamplerIndexer.INDEX_SNIPPET_FIELD}, analyzer);
+////			Query query = parser.parse("\"sunday late\"");
+////			Query query = parser.parse("remember food");
+//			
+//			
+//			
+//			
+//			Query bq = parser.createBooleanQuery(AbstractSamplerIndexer.INDEX_CONTENTS_FIELD, "remember food food");
+////			for(BooleanClause c : ((BooleanQuery)bq).getClauses()) {
+////				System.out.println(c.toString());
+////			}
+//			
+////			Query query = new ProductBooleanQuery((BooleanQuery)bq);
+//			
+//			Query query = new PowTermQuery(new Term(AbstractSamplerIndexer.INDEX_CONTENTS_FIELD, "rememb"), 1);
+//			
+//			
+//			
+////			Query query = new PBQ(AbstractSamplerIndexer.INDEX_TEXT_FIELD, "remember");
+//			
+//			
+////			Query query = new TermQuery(new Term(AbstractSamplerIndexer.INDEX_TEXT_FIELD, "rememb"));
+//			
+////			Query query = bq;
+//			
+//			
+////			query = MultiTermQuery
+//			
+////			query = new PBQ((BooleanQuery)query);
+//			
+//			
+////			Query query = parser.createPhraseQuery(AbstractSamplerIndexer.INDEX_TEXT_FIELD, "remember food");
+//			
+//			
+//			
+////			
+////			BooleanQuery query = new BooleanQuery();
+////			query.add(new BooleanClause(new TermQuery(new Term(AbstractSamplerIndexer.INDEX_TEXT_FIELD, "rememb")), Occur.SHOULD));
+////			query.add(new BooleanClause(new TermQuery(new Term(AbstractSamplerIndexer.INDEX_TEXT_FIELD, "food")), Occur.SHOULD));
+////			
+//			System.out.println(query.getClass());
+//			
+////			DocumentCentricModel customQuery = new DocumentCentricModel(query);
+////			for(int i = 0; i < ireader.numDocs(); i++) {
+//////				org.apache.lucene.document.Document doc = ireader.document(i);
+//////				System.out.println(hits[i].doc + "  " + hits[i].score + "  " + doc.get(AbstractSamplerIndexer.INDEX_DOC_NAME_FIELD) + " " + doc.get(AbstractSamplerIndexer.INDEX_VERTICAL_FIELD));
+////				
+////				System.out.println(searcher.explain(customQuery, i) + "\n\n\n");
+////			}
+//			
+//			
+////			org.apache.lucene.search.BooleanScorer
+//			ScoreDoc[] hits = searcher.search(query, Integer.MAX_VALUE).scoreDocs;
+//			for (int i = 0; i < hits.length; i++) {
+//				org.apache.lucene.document.Document doc = ireader.document(hits[i].doc);
+//				System.out.println("\n\n\nDOC: " + hits[i].doc + "  " + hits[i].score + "  " + doc.get(AbstractSamplerIndexer.INDEX_DOC_NAME_FIELD) + " " + doc.get(AbstractSamplerIndexer.INDEX_VERTICAL_FIELD));
+//				
+//				System.out.println(searcher.explain(query, hits[i].doc) + "\n\n\n");
+//			}
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+//			Directory index = new NIOFSDirectory(CommonUtils.getIndexPath().resolve(collection.getId()).resolve(AbstractSamplerIndexer.getIndexName()).toFile());
+//			DirectoryReader ireader = DirectoryReader.open(index);
+//			
+//			
+//			IndexSearcher searcher = new IndexSearcher(ireader);
+//			
+//						QueryParser parser;
+//			List<String> queriedFields = new ArrayList<String>();
+//			
+//			if(AbstractSamplerIndexer.isIndexSnippets()) {
+//				queriedFields.add(AbstractSamplerIndexer.INDEX_TITLE_FIELD);
+//				queriedFields.add(AbstractSamplerIndexer.INDEX_SNIPPET_FIELD);
+//			}
+//			
+//			if(AbstractSamplerIndexer.isIndexDocs()) {
+//				queriedFields.add(AbstractSamplerIndexer.INDEX_TEXT_FIELD);
+//			}
+//			
+//			if(queriedFields.size() == 1) {
+//				parser = new QueryParser(CommonUtils.LUCENE_VERSION, queriedFields.get(0), analyzer);
+//			} else {
+//				parser = new MultiFieldQueryParser(CommonUtils.LUCENE_VERSION, queriedFields.toArray(new String[0]), analyzer);
+//			}
+//			
+//			
+//			Query query = parser.parse("title science other");
+//			searcher.setSimilarity(new DocumentCentricSimilarity());
+//			
+//			DocumentCentricModel customQuery = new DocumentCentricModel(query);
+//
+//			ScoreDoc[] hits = searcher.search(query, Integer.MAX_VALUE).scoreDocs;
+//
+//			System.out.println(query.getClass());
+////			System.out.println(ireader.docFreq(new Term(AbstractSamplerIndexer.INDEX_TEXT_FIELD, "titl")));
+//			System.out.println(hits.length);
+//			for (int i = 0; i < hits.length; i++) {
+//			   // iterating over the results
+//			   // hits[i].doc gives you the doc
+//				
+//				System.out.println(hits[i].score);
+////				System.out.println(searcher.explain(customQuery, hits[i].doc));
+//				System.out.println(searcher.explain(query, 261));
+//				break;
+//			}
+			
+			
+			
+			
+			
+			
+			
 //			for(VerticalCollectionData data : collection.getVerticals()) {
 ////				if(data.getVertical().getId().equalsIgnoreCase("orgprints")) {
 //				if(data.getVerticalCollectionId().equalsIgnoreCase("e023")) {
@@ -340,15 +606,41 @@ public class Main {
 //			size.estimateSize(MessageFormat.format("{0}-sample-docs", collection.getId()));
 			
 			
-			AbstractSamplerIndexer indexer = AbstractSamplerIndexer.newInstance();
-			indexer.storeIndex(MessageFormat.format("{0}-sample-docs", collection.getId()), collection);
+//			AbstractSamplerIndexer indexer = AbstractSamplerIndexer.newInstance();
+//			indexer.storeIndex(MessageFormat.format("{0}-sample-docs", collection.getId()), collection);
 //			
 //			
 //			VerticalSelection selection = new SizeRankVerticalSelection(collection);
-////			selection.search("LHC collision publications");
-//			selection.testQueries("sizerankmodel");
+//			selection.precisionEval(java.nio.file.Paths.get("/home/andres/aggregator/analysis/FW13-eval/docsSnippets/sizerankmodel"),
+//					java.nio.file.Paths.get("/home/andres/aggregator/analysis/FW13-QRELS-RS.txt"));
+////			
+//			selection.testQueries(selection.getModelCodeName());
+//			selection.close();
+//			
+//
+////			for(Entry<String,Double> data : selection.execute("world cup")) {
+////				System.out.println(data.getKey() + "  " + data.getValue());
+////			}
 //			
 //			selection.close();
+			
+
+			
+			
+			
+//			List<Class<? extends VerticalSelection>> models = new ArrayList<Class<? extends VerticalSelection>>();
+//			models.add(BasicMaxVerticalSelection.class);
+//			models.add(BasicMeanVerticalSelection.class);
+//			models.add(BasicSumVerticalSelection.class);
+//			models.add(RankVerticalSelection.class);
+//			models.add(SizeRankVerticalSelection.class);
+//			models.add(SizeMaxVerticalSelection.class);
+//			
+//			for(Class<? extends VerticalSelection> model : models) {
+//				VerticalSelection selection = model.getConstructor(VerticalCollection.class).newInstance(collection);
+//				selection.testQueries(selection.getModelCodeName());
+//				selection.close();
+//			}
 
 			
 			

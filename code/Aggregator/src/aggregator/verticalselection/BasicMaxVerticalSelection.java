@@ -6,10 +6,11 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.apache.lucene.search.Query;
 
 import aggregator.beans.VerticalCollection;
 
-public class BasicMaxVerticalSelection extends VerticalSelection {
+public class BasicMaxVerticalSelection extends AbstractSelectionModel {
 	
 	/**
 	 * Default Constructor
@@ -34,6 +35,17 @@ public class BasicMaxVerticalSelection extends VerticalSelection {
 		}
 		
 		return result;
+	}
+
+	@Override
+	public String getModelCodeName() {
+		return "baselinemax";
+	}
+
+	@Override
+	protected Query prepareQuery(String queryString) {
+		// TODO Auto-generated method stub
+		return null;
 	}
 
 	

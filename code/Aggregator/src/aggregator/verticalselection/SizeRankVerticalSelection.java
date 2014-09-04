@@ -8,10 +8,11 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.apache.lucene.search.Query;
 
 import aggregator.beans.VerticalCollection;
 
-public class SizeRankVerticalSelection extends VerticalSelection {
+public class SizeRankVerticalSelection extends AbstractSelectionModel {
 	
 	/**
 	 * Default Constructor
@@ -40,7 +41,11 @@ public class SizeRankVerticalSelection extends VerticalSelection {
 				}
 				
 				verticalScore = verticalScore.multiply(sizeFactor);
-				result.add(new ImmutablePair<String, Double>(data.getKey(), Math.log10(verticalScore.doubleValue())));
+				double logScore = Math.log10(verticalScore.doubleValue());
+				
+				if(logScore > 0) {
+					result.add(new ImmutablePair<String, Double>(data.getKey(), logScore));
+				}
 			}
 		}
 		catch(Exception ex) {
@@ -48,6 +53,17 @@ public class SizeRankVerticalSelection extends VerticalSelection {
 		}
 		
 		return result;
+	}
+
+	@Override
+	public String getModelCodeName() {
+		return "sizerankmodel";
+	}
+
+	@Override
+	protected Query prepareQuery(String queryString) {
+		// TODO Auto-generated method stub
+		return null;
 	}
 
 	

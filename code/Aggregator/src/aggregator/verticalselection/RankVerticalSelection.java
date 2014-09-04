@@ -8,10 +8,11 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.apache.lucene.search.Query;
 
 import aggregator.beans.VerticalCollection;
 
-public class RankVerticalSelection extends VerticalSelection {
+public class RankVerticalSelection extends AbstractSelectionModel {
 	
 	/**
 	 * Default Constructor
@@ -46,6 +47,17 @@ public class RankVerticalSelection extends VerticalSelection {
 		}
 		
 		return result;
+	}
+
+	@Override
+	public String getModelCodeName() {
+		return "rankmodel";
+	}
+
+	@Override
+	protected Query prepareQuery(String queryString) {
+		// TODO Auto-generated method stub
+		return null;
 	}
 
 	

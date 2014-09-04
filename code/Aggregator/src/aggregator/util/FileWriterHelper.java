@@ -12,6 +12,7 @@ import org.apache.commons.logging.LogFactory;
 
 public class FileWriterHelper implements Closeable {
 	
+	protected final String timestampPattern = "yyyy/MM/dd HH:mm:ss.SSS";
 	protected Log log = LogFactory.getLog(FileWriterHelper.class);
 	
 	private final Path filePath;
@@ -115,5 +116,13 @@ public class FileWriterHelper implements Closeable {
 		catch(Exception ex) {
 			log.error(ex.getMessage(), ex);
 		}
+	}
+
+
+	/**
+	 * @return the filePath
+	 */
+	public Path getFilePath() {
+		return filePath;
 	}
 }

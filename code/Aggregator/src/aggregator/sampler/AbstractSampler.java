@@ -75,7 +75,7 @@ public abstract class AbstractSampler {
 	
 	
 	/**
-	 * Creates a new instance of the configured query strategy]
+	 * Creates a new instance of the configured query strategy
 	 * @return Query strategy instance
 	 */
 	private void initQueryStrategy() {

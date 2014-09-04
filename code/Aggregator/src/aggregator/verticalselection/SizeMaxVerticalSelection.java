@@ -10,13 +10,13 @@ import org.apache.lucene.search.Query;
 
 import aggregator.beans.VerticalCollection;
 
-public class BasicMeanVerticalSelection extends AbstractSelectionModel {
+public class SizeMaxVerticalSelection extends AbstractSelectionModel {
 	
 	/**
 	 * Default Constructor
 	 * @param collection Vertical Collection
 	 */
-	public BasicMeanVerticalSelection(VerticalCollection collection) {
+	public SizeMaxVerticalSelection(VerticalCollection collection) {
 		super(collection);
 	}
 
@@ -27,7 +27,13 @@ public class BasicMeanVerticalSelection extends AbstractSelectionModel {
 		{
 			CSIResultData csiResult = this.searchCSI(queryString);
 			for(Map.Entry<String, CSIVertical> data : csiResult.getVerticals().entrySet()) {
-				result.add(new ImmutablePair<String, Double>(data.getKey(), data.getValue().getScoresAverage()));
+				double score = data.getValue().getScoresMax();
+				double sizeFactor = collection.getVerticalData(data.getKey()).getSizeFactor();
+				
+				double logScore = Math.log10(score * sizeFactor);
+				if(logScore > 0) {
+					result.add(new ImmutablePair<String, Double>(data.getKey(), logScore));
+				}
 			}
 		}
 		catch(Exception ex) {
@@ -39,7 +45,7 @@ public class BasicMeanVerticalSelection extends AbstractSelectionModel {
 
 	@Override
 	public String getModelCodeName() {
-		return "baselinemean";
+		return "sizemaxmodel";
 	}
 
 	@Override

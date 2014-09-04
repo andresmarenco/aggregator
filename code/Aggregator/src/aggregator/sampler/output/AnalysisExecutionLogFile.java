@@ -14,7 +14,6 @@ import aggregator.util.FileWriterHelper;
 
 public class AnalysisExecutionLogFile extends FileWriterHelper {
 	
-	private final String timestampPattern = "yyyy/MM/dd HH:ss.SSS";
 	private PeriodFormatter periodFormatter;
 
 	/**

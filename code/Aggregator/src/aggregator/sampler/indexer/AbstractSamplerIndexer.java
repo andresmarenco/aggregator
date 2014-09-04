@@ -21,11 +21,14 @@ import aggregator.verticalwrapper.VerticalWrapperController;
 
 public abstract class AbstractSamplerIndexer implements Closeable {
 	
-	public static final String INDEX_TEXT_FIELD = "text";
+	public static final String INDEX_CONTENTS_FIELD = "contents";
 	public static final String INDEX_DOC_NAME_FIELD = "docName";
 	public static final String INDEX_VERTICAL_FIELD = "vertical";
 	
 	private static final String SAMPLER_INDEXER_KEY = "aggregator.sampler.indexer";
+	private static final String INDEX_USE_DOCS_KEY = "aggregator.sampler.indexer.useDocs";
+	private static final String INDEX_USE_SNIPPETS_KEY = "aggregator.sampler.indexer.useSnippets";
+	private static final String INDEX_NAME_KEY = "aggregator.sampler.indexer.name";
 	
 	protected Vertical vertical;
 	protected SamplerParser samplerParser;
@@ -38,6 +41,8 @@ public abstract class AbstractSamplerIndexer implements Closeable {
 	 * Default Constructor
 	 */
 	public AbstractSamplerIndexer() {
+		this.intermediateResults = new MemoryIntermediateResults();
+		
 		try
 		{
 			this.indexPath = CommonUtils.getIndexPath();
@@ -167,6 +172,33 @@ public abstract class AbstractSamplerIndexer implements Closeable {
 	 */
 	public void setIntermediateResults(IntermediateResults intermediateResults) {
 		this.intermediateResults = intermediateResults;
+	}
+
+	
+	/**
+	 * Gets the name of the current index
+	 * @return Name of the current index
+	 */
+	public static final String getIndexName() {
+		return System.getProperty(INDEX_NAME_KEY);
+	}
+	
+	
+	/**
+	 * Gets if the index contains the snippets
+	 * @return True if the index contains the snippets
+	 */
+	public static final boolean isIndexSnippets() {
+		return Boolean.parseBoolean(System.getProperty(INDEX_USE_SNIPPETS_KEY, "false"));
+	}
+	
+	
+	/**
+	 * Gets if the index contains the documents' text
+	 * @return True if the index contains the documents' text
+	 */
+	public static final boolean isIndexDocs() {
+		return Boolean.parseBoolean(System.getProperty(INDEX_USE_DOCS_KEY, "true"));
 	}
 
 

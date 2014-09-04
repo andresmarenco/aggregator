@@ -2,6 +2,7 @@ package aggregator.util;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.math.RoundingMode;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -12,6 +13,7 @@ import java.util.List;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.lucene.util.Version;
 import org.joda.time.LocalDateTime;
 
 public class CommonUtils {
@@ -24,7 +26,10 @@ public class CommonUtils {
 	private static final String ANALYSIS_PATH_KEY = "aggregator.analysisPath";
 	private static final String TIMESTAMP_PATTERN_KEY = "aggregator.timeStampPattern";
 	private static Log log = LogFactory.getLog(CommonUtils.class);
-
+	
+	public static final Version LUCENE_VERSION = Version.LUCENE_4_9;
+	public static final RoundingMode DEFAULT_ROUNDING_MODE = RoundingMode.HALF_EVEN;
+	public static final int DEFAULT_DIVISION_SCALE = 15;
 	
 	/**
 	 * Gets the current timestamp based on the configured pattern

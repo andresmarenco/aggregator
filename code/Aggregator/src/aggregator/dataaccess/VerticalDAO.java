@@ -154,7 +154,8 @@ public class VerticalDAO {
 												new VerticalCollectionData(
 														verticals.getString("id"),
 														new Vertical(verticals.getString("vertical_id")),
-														verticals.getDouble("size_factor")));
+														verticals.getDouble("size_factor"),
+														verticals.getInt("sample_size")));
 									}
 								}
 							}
@@ -173,10 +174,40 @@ public class VerticalDAO {
 	
 	
 	
+	
+	/**
+	 * Updates the size factor of the vertical in the collection
+	 * @param collectionId Collection ID
+	 * @param verticalId Vertical ID
+	 * @param sizeFactor Size factor
+	 */
 	public void updateSizeFactor(String collectionId, String verticalId, double sizeFactor) {
 		try(Connection connection = connectionManager.getConnection()) {
 			try(PreparedStatement stmt = connection.prepareStatement("update ir_vertical_by_collection set size_factor = ? where vertical_id=? and collection_id=?")) {
 				stmt.setDouble(1, sizeFactor);
+				stmt.setString(2, verticalId);
+				stmt.setString(3, collectionId);
+				stmt.execute();
+			}
+		}
+		catch(SQLException ex) {
+			log.error(ex.getMessage(), ex);
+		}
+	}
+	
+	
+	
+	
+	/**
+	 * Updates the sample size of the vertical in the collection
+	 * @param collectionId Collection ID
+	 * @param verticalId Vertical ID
+	 * @param sampleSize Sample size
+	 */
+	public void updateSampleSize(String collectionId, String verticalId, int sampleSize) {
+		try(Connection connection = connectionManager.getConnection()) {
+			try(PreparedStatement stmt = connection.prepareStatement("update ir_vertical_by_collection set sample_size = ? where vertical_id=? and collection_id=?")) {
+				stmt.setInt(1, sampleSize);
 				stmt.setString(2, verticalId);
 				stmt.setString(3, collectionId);
 				stmt.execute();
