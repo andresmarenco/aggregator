@@ -130,6 +130,17 @@ public class VerticalDAO {
 	 * @return Collection data
 	 */
 	public VerticalCollection loadVerticalCollection(String collectionId) {
+		return this.loadVerticalCollection(collectionId, false);
+	}
+	
+	
+	/**
+	 * Loads the collection and its verticals
+	 * @param collectionId Collection Id
+	 * @param loadVerticalData Loads the complete vertical individual data
+	 * @return Collection data
+	 */
+	public VerticalCollection loadVerticalCollection(String collectionId, boolean loadVerticalData) {
 		VerticalCollection result = null;
 		try(Connection connection = connectionManager.getConnection())
 		{
@@ -153,7 +164,7 @@ public class VerticalDAO {
 										result.getVerticals().add(
 												new VerticalCollectionData(
 														verticals.getString("id"),
-														new Vertical(verticals.getString("vertical_id")),
+														loadVerticalData ? this.loadVertical(verticals.getString("vertical_id")) : new Vertical(verticals.getString("vertical_id")),
 														verticals.getDouble("size_factor"),
 														verticals.getInt("sample_size")));
 									}

@@ -52,8 +52,17 @@ public class PowTermQuery extends Query {
 
 	  /** Returns the term of this query. */
 	  public Term getTerm() { return term; }
+	  
+	  
 
-	  @Override
+	  /**
+	 * @return the queryFreq
+	 */
+	public int getQueryFreq() {
+		return queryFreq;
+	}
+
+	@Override
 	  public Weight createWeight(IndexSearcher searcher) throws IOException {
 //	  System.out.println("POW CREATE WEIGHT!!!!!!!!!!!!!!!!");
 		  
@@ -167,6 +176,7 @@ public class PowTermQuery extends Query {
 		      final TermState state = termStates.get(context.ord);
 		      if (state == null) { // term is not present in that reader
 		        assert termNotInReader(context.reader(), getTerm()) : "no termstate found but term exists in reader term=" + getTerm();
+		        termNotInReader(context.reader(), getTerm());
 		        return null;
 		      }
 		      //System.out.println("LD=" + reader.getLiveDocs() + " set?=" + (reader.getLiveDocs() != null ? reader.getLiveDocs().get(0) : "null"));
@@ -177,38 +187,71 @@ public class PowTermQuery extends Query {
 		    
 		    private boolean termNotInReader(AtomicReader reader, Term term) throws IOException {
 		      // only called from assert
-		      //System.out.println("TQ.termNotInReader reader=" + reader + " term=" + field + ":" + bytes.utf8ToString());
+//		      System.out.println("TQ.termNotInReader reader=" + reader + " term=" + getTerm().field() + ":" + getTerm().bytes().utf8ToString());
 		      return reader.docFreq(term) == 0;
 		    }
 		    
 		    @Override
 		    public Explanation explain(AtomicReaderContext context, int doc) throws IOException {
-		      Scorer scorer = scorer(context, context.reader().getLiveDocs());
-		      if (scorer != null) {
-		        int newDoc = scorer.advance(doc);
-		        if (newDoc == doc) {
-		          float freq = scorer.freq();
-		          SimScorer docScorer = similarity.simScorer(stats, context);
-		          ComplexExplanation result = new ComplexExplanation();
-		          result.setDescription("weight("+getQuery()+" in "+doc+") [" + similarity.getClass().getSimpleName() + "], result of:");
-		          
-		          ComplexExplanation powResult = new ComplexExplanation();
-		          Explanation scoreExplanation = docScorer.explain(doc, new Explanation(freq, "termFreq=" + freq));
-		          
-		          
-		          powResult.setDescription("score^[n(t,q)]");
-		          powResult.addDetail(scoreExplanation);
-		          powResult.addDetail(new Explanation(queryFreq, "n(t,q)"));
-		          powResult.setValue(BigDecimal.valueOf(scoreExplanation.getValue()).pow(queryFreq).floatValue());
-		          
-
-		          result.addDetail(powResult);
-		          result.setMatch(true);
-		          result.setValue(powResult.getValue());
-		          return result;
-		        }
-		      }
-		      return new ComplexExplanation(false, 0.0f, "no matching term");      
+		    	Scorer scorer = scorer(context, context.reader().getLiveDocs());
+		    	float freq = 0;
+		    	
+		    	ComplexExplanation result = new ComplexExplanation();
+		    	result.setDescription("weight("+getQuery()+" in "+doc+") [" + similarity.getClass().getSimpleName() + "], result of:");
+		    	
+		    	if (scorer != null) {
+		    		int newDoc = scorer.advance(doc);
+		    		if(newDoc == doc) {
+		    			result.setMatch(true);
+		    			freq = scorer.freq();
+		    		} else {
+		    			result.setMatch(false);
+		    		}
+		    	}
+		    	
+		    	SimScorer docScorer = similarity.simScorer(stats, context);
+		    	Explanation scoreExplanation = docScorer.explain(doc, new Explanation(freq, "termFreq=" + freq));
+		    	
+		        ComplexExplanation powResult = new ComplexExplanation();
+		    	powResult.setDescription("score^[n(t,q)]");  
+		    	powResult.addDetail(scoreExplanation);
+		    	powResult.setValue(BigDecimal.valueOf(scoreExplanation.getValue()).pow(queryFreq).floatValue());
+		    	powResult.addDetail(new Explanation(queryFreq, "n(t,q)"));
+		    	
+		    	result.addDetail(powResult);
+		    	result.setValue(powResult.getValue());
+		    	
+		        
+		    	return result;
+		    	
+		    	
+		    	
+//		      Scorer scorer = scorer(context, context.reader().getLiveDocs());
+//		      if (scorer != null) {
+//		        int newDoc = scorer.advance(doc);
+//		        if (newDoc == doc) {
+//		          float freq = scorer.freq();
+//		          SimScorer docScorer = similarity.simScorer(stats, context);
+//		          ComplexExplanation result = new ComplexExplanation();
+//		          result.setDescription("weight("+getQuery()+" in "+doc+") [" + similarity.getClass().getSimpleName() + "], result of:");
+//		          
+//		          ComplexExplanation powResult = new ComplexExplanation();
+//		          Explanation scoreExplanation = docScorer.explain(doc, new Explanation(freq, "termFreq=" + freq));
+//		          
+//		          
+//		          powResult.setDescription("score^[n(t,q)]");
+//		          powResult.addDetail(scoreExplanation);
+//		          powResult.addDetail(new Explanation(queryFreq, "n(t,q)"));
+//		          powResult.setValue(BigDecimal.valueOf(scoreExplanation.getValue()).pow(queryFreq).floatValue());
+//		          
+//
+//		          result.addDetail(powResult);
+//		          result.setMatch(true);
+//		          result.setValue(powResult.getValue());
+//		          return result;
+//		        }
+//		      }
+//		      return new ComplexExplanation(false, 0.0f, "no matching term");      
 		    }
 	}
 	

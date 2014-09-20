@@ -13,7 +13,7 @@ import aggregator.util.CommonUtils;
  */
 public abstract class UiSSelectionModel extends AbstractSelectionModel {
 	
-	private final BigDecimal collectionSize;
+//	private BigDecimal collectionSize;
 
 	/**
 	 * Default Constructor
@@ -22,7 +22,6 @@ public abstract class UiSSelectionModel extends AbstractSelectionModel {
 	public UiSSelectionModel(VerticalCollection collection) {
 		super(collection);
 		
-		this.collectionSize = (ireader != null) ? BigDecimal.valueOf(ireader.numDocs()) : BigDecimal.ZERO;
 	}
 	
 	
@@ -34,7 +33,12 @@ public abstract class UiSSelectionModel extends AbstractSelectionModel {
 	 * @return Collection (vertical) prior value
 	 */
 	protected double getCollectionPrior(VerticalCollectionData vertical) {
+
+		final BigDecimal collectionSize = (ireader != null) ? BigDecimal.valueOf(ireader.numDocs()) : BigDecimal.ZERO;
+		
 		BigDecimal sampleSize = BigDecimal.valueOf(vertical.getSampleSize());
+//		System.out.println("SAMPLE " + sampleSize + "   COLLECTION: " + collectionSize);
+		
 		return sampleSize.divide(collectionSize.subtract(sampleSize), CommonUtils.DEFAULT_DIVISION_SCALE, CommonUtils.DEFAULT_ROUNDING_MODE).doubleValue();
 	}
 	

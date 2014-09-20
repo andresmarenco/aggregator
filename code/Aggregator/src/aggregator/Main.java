@@ -7,8 +7,11 @@ import java.io.FileInputStream;
 import java.io.FileReader;
 import java.io.InputStreamReader;
 import java.io.StringReader;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.text.DateFormat;
 import java.text.MessageFormat;
@@ -17,6 +20,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -40,6 +44,7 @@ import org.apache.lucene.document.Field;
 import org.apache.lucene.document.StringField;
 import org.apache.lucene.document.TextField;
 import org.apache.lucene.index.DirectoryReader;
+import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig;
 import org.apache.lucene.index.MultiDocsEnum;
@@ -59,6 +64,7 @@ import org.apache.lucene.search.ProductBooleanQuery;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.TermQuery;
+import org.apache.lucene.search.UiSDocumentCentricQuery;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.NIOFSDirectory;
 import org.apache.lucene.store.RAMDirectory;
@@ -92,6 +98,7 @@ import aggregator.beans.DOCSampledDocument;
 import aggregator.beans.PDFSampledDocument;
 import aggregator.beans.QueryResult;
 import aggregator.beans.SampledDocument;
+import aggregator.beans.TFDF;
 import aggregator.beans.Vertical;
 import aggregator.beans.VerticalCategory;
 import aggregator.beans.VerticalCollection;
@@ -110,6 +117,7 @@ import aggregator.sampler.analysis.sizeestimation.SampleResample;
 import aggregator.sampler.indexer.AbstractSamplerIndexer;
 import aggregator.sampler.indexer.LuceneSamplerIndexer;
 import aggregator.sampler.output.SampledDocumentOutput;
+import aggregator.sampler.output.TFDFLogFile;
 import aggregator.sampler.output.TokensLogFile;
 import aggregator.sampler.parser.HTMLSamplerParser;
 import aggregator.sampler.parser.SamplerParser;
@@ -342,34 +350,160 @@ public class Main {
 			
 			
 			
-//			List<String> v = new ArrayList<String>();
-//			for(int i = 180; i<=185; i++) {
-//				v.add(MessageFormat.format("e{0}", String.valueOf(i)));
-//			}
-			
 //////			
 			VerticalDAO dao = new VerticalDAO(DirectConnectionManager.getInstance());
-			VerticalCollection collection = dao.loadVerticalCollection("FW13");
+			VerticalCollection collection = dao.loadVerticalCollection("FW13", true);
+			
+//			Analyzer analyzer = new AggregatorAnalyzer(CommonUtils.LUCENE_VERSION);
+//			Directory index = new NIOFSDirectory(CommonUtils.getIndexPath().resolve(collection.getId()).resolve(AbstractSamplerIndexer.getIndexName()).toFile());
+//			try(IndexReader reader = DirectoryReader.open(index)) {
+////				
+////				QueryParser parser = new QueryParser(CommonUtils.LUCENE_VERSION, AbstractSamplerIndexer.INDEX_CONTENTS_FIELD, analyzer);
+////				Query query = parser.parse("Allen Ginsberg Howl review");
+////				Set<Term> terms = new HashSet<Term>();
+////				query.extractTerms(terms);
+////				System.out.println(terms);
+//				
+//				//[contents:zimerman, contents:chopin, contents:ballad]
+//				//[contents:laptop, contents:vaio, contents:soni]
+//				//[contents:ginsberg, contents:allen, contents:howl, contents:review]
+////				Term t1 = new Term(AbstractSamplerIndexer.INDEX_CONTENTS_FIELD, "laptop");
+////				Term t2 = new Term(AbstractSamplerIndexer.INDEX_CONTENTS_FIELD, "vaio");
+////				Term t3 = new Term(AbstractSamplerIndexer.INDEX_CONTENTS_FIELD, "soni");
+//				
+//				Term t1 = new Term(AbstractSamplerIndexer.INDEX_CONTENTS_FIELD, "ginsberg");
+//				Term t2 = new Term(AbstractSamplerIndexer.INDEX_CONTENTS_FIELD, "allen");
+//				Term t3 = new Term(AbstractSamplerIndexer.INDEX_CONTENTS_FIELD, "howl");
+//				Term t4 = new Term(AbstractSamplerIndexer.INDEX_CONTENTS_FIELD, "review");
+//				
+//				
+//				System.out.println(reader.totalTermFreq(t1) + "   " + reader.docFreq(t1));
+//				System.out.println(reader.totalTermFreq(t2) + "   " + reader.docFreq(t2));
+//				System.out.println(reader.totalTermFreq(t3) + "   " + reader.docFreq(t3));
+//				System.out.println(reader.totalTermFreq(t4) + "   " + reader.docFreq(t4));
+//				
+//				System.out.println("TOTAL: " + reader.getSumTotalTermFreq(AbstractSamplerIndexer.INDEX_CONTENTS_FIELD) + "  " + reader.numDocs());
+//				
+//			}
+			
+			
+			
+			
+//			DocumentAnalysis.computeTFDF(collection, MessageFormat.format("{0}-sample-docs", collection.getId()));
+			
 			
 //			AbstractSamplerIndexer indexer = AbstractSamplerIndexer.newInstance();
 //			indexer.storeIndex(MessageFormat.format("{0}-sample-docs", collection.getId()), collection);
+			
+//			try(BufferedReader reader = new BufferedReader(new FileReader("/home/andres/debug"))) {
+//				String line;
+//				long count = 0;
+//				double result = 0;
+//				while((line = reader.readLine()) != null) {
+//					if(line.contains("DOCID:")) {
+//						count++;
+//						String score = line.substring(line.indexOf("SCORE: ") + 7);
+//						result += Double.parseDouble(score);
+//					}
+//				}
+//				
+//				BigDecimal sampleSize = BigDecimal.valueOf(collection.getVerticalData("cern").getSampleSize());
+//				
+//				final BigDecimal collectionSize = BigDecimal.valueOf(1894057);
+//				double prior = sampleSize.divide(collectionSize.subtract(sampleSize), CommonUtils.DEFAULT_DIVISION_SCALE, CommonUtils.DEFAULT_ROUNDING_MODE).doubleValue();
+//				
+////				result = Double.parseDouble(String.valueOf(result).substring(0, String.valueOf(result).indexOf("E")));
+//				System.out.println(result + "    " + Math.log10(result));
+//				System.out.println((result * prior) + "    " + Math.log10(result * prior));
+//				
+////				System.out.println(Math.pow(10, -1004.595276107146));
+//				//0,000003836
+//				//0,004444325
+//			}
+			
+			
+			try(AbstractSelectionModel selection = AbstractSelectionModel.newInstance(collection)) {
+//				AbstractSelectionModel explain = new ExplainSelectionModel(selection);
+//				explain.execute("LHC collision publications");
+//				
+//				List<Entry<String, Double>> result = selection.execute("LHC collision publications");
 				
-			AbstractSelectionModel selection = AbstractSelectionModel.newInstance(collection);
-//			AbstractSelectionModel explain = new ExplainSelectionModel(selection);
-//			explain.execute("swahili dishes");
-			
-			
-			selection.testQueries();
-			selection.close();
+//				for(Entry<String, Double> d : result) {
+//				for(int i = 0; i < result.size(); i++) {
+//					Entry<String, Double> d = result.get(i);
+//					System.out.println((i+1) + " -  " + d.getKey() + "  " + Math.log10(d.getValue()));
+//				}
+				
+//////////	
+				selection.testQueries(selection.getModelCodeName() + 1000);
+			}
 			
 //			dao.updateSampleSize(collection.getId(), "4shared", 10);
+			
+//			Map<String, List<String>> input = new HashMap<String, List<String>>();
+//			Map<String, List<String>> selectionData = new HashMap<String, List<String>>();
+//			
+//			try(BufferedReader reader = new BufferedReader(new FileReader("/mnt/data/aggregator/analysis/input"))) {
+//				String line;
+//				while((line = reader.readLine()) != null) {
+//					String[] data = line.split("\\s+");
+//					List<String> engines = input.get(data[0]);
+//					if(engines == null) {
+//						engines = new ArrayList<String>();
+//						input.put(data[0], engines);
+//					}
+//					
+//					engines.add(data[2]);
+//				}
+//			}
+//			
+//			
+//			try(BufferedReader reader = new BufferedReader(new FileReader("/mnt/data/aggregator/analysis/FW13-eval/docs/UiSDC10"))) {
+//				String line;
+//				while((line = reader.readLine()) != null) {
+//					String[] data = line.split("\\s+");
+//					List<String> engines = selectionData.get(data[0]);
+//					if(engines == null) {
+//						engines = new ArrayList<String>();
+//						selectionData.put(data[0], engines);
+//					}
+//					
+//					engines.add(data[2]);
+//				}
+//			}
+//			
+//			
+//			int[] testAt = {1,3,5,10,20};
+//			System.out.println("topic,@1,@3,@5,@10,@20");
+//			for(Entry<String, List<String>> entry : input.entrySet()) {
+//				System.out.print(entry.getKey() + ",");
+//				List<String> engines = selectionData.get(entry.getKey());
+//				for(int t : testAt) {
+//					List<String> subInput = entry.getValue().subList(0, t);
+//					List<String> subEngines = engines.subList(0, t);
+//					int correct = 0;
+//					for(String e : subInput) {
+//						if(subEngines.contains(e)) {
+//							correct++;
+//						}
+//					}
+//					
+//					System.out.print(BigDecimal.valueOf(correct).divide(BigDecimal.valueOf(t), 10, RoundingMode.HALF_UP).doubleValue());
+////					System.out.print(correct);
+//					
+//					if(t != testAt[testAt.length-1]) {
+//						System.out.print(",");
+//					}
+//				}
+//				System.out.println();
+//			}
 			
 			
 			
 //			Analyzer analyzer = new AggregatorAnalyzer(CommonUtils.LUCENE_VERSION);
 //			Directory index = new RAMDirectory();
 //			IndexWriterConfig config = new IndexWriterConfig(CommonUtils.LUCENE_VERSION, analyzer);
-//			config.setSimilarity(new UiSDocumentCentricSimilarity());
+//			config.setSimilarity(AbstractSelectionModel.getDefaultSimilary());
 //			
 //			
 //			IndexWriter writer = new IndexWriter(index, config);
@@ -379,7 +513,7 @@ public class Main {
 //					"text document sample data file text document read index cup scissors sting song the police"
 //					, Field.Store.NO));
 //			indexDoc.add(new StringField(AbstractSamplerIndexer.INDEX_DOC_NAME_FIELD, "d1", Field.Store.YES));
-//			indexDoc.add(new StringField(AbstractSamplerIndexer.INDEX_VERTICAL_FIELD, "v1", Field.Store.YES));
+//			indexDoc.add(new StringField(AbstractSamplerIndexer.INDEX_VERTICAL_FIELD, "bigweb", Field.Store.YES));
 //			
 //			writer.addDocument(indexDoc);
 //			
@@ -390,7 +524,7 @@ public class Main {
 //					"song text juice guitar solo paper pencil text title author title many years among sample"
 //					, Field.Store.NO));
 //			indexDoc.add(new StringField(AbstractSamplerIndexer.INDEX_DOC_NAME_FIELD, "d2", Field.Store.YES));
-//			indexDoc.add(new StringField(AbstractSamplerIndexer.INDEX_VERTICAL_FIELD, "v1", Field.Store.YES));
+//			indexDoc.add(new StringField(AbstractSamplerIndexer.INDEX_VERTICAL_FIELD, "bigweb", Field.Store.YES));
 //			
 //			writer.addDocument(indexDoc);
 //			
@@ -401,7 +535,7 @@ public class Main {
 //					"remember test data walk play youtube data data she gave thought seems remember"
 //					, Field.Store.NO));
 //			indexDoc.add(new StringField(AbstractSamplerIndexer.INDEX_DOC_NAME_FIELD, "d3", Field.Store.YES));
-//			indexDoc.add(new StringField(AbstractSamplerIndexer.INDEX_VERTICAL_FIELD, "v1", Field.Store.YES));
+//			indexDoc.add(new StringField(AbstractSamplerIndexer.INDEX_VERTICAL_FIELD, "bigweb", Field.Store.YES));
 //			
 //			writer.addDocument(indexDoc);
 //			
@@ -412,7 +546,7 @@ public class Main {
 //					"song text juice guitar solo paper pencil text title author tuesday mind mind fine days"
 //					, Field.Store.NO));
 //			indexDoc.add(new StringField(AbstractSamplerIndexer.INDEX_DOC_NAME_FIELD, "d1", Field.Store.YES));
-//			indexDoc.add(new StringField(AbstractSamplerIndexer.INDEX_VERTICAL_FIELD, "v2", Field.Store.YES));
+//			indexDoc.add(new StringField(AbstractSamplerIndexer.INDEX_VERTICAL_FIELD, "arxiv", Field.Store.YES));
 //			
 //			writer.addDocument(indexDoc);
 //			
@@ -423,7 +557,7 @@ public class Main {
 //					"remember test data thought remember sunday late talk cook food food remember"
 //					, Field.Store.NO));
 //			indexDoc.add(new StringField(AbstractSamplerIndexer.INDEX_DOC_NAME_FIELD, "d2", Field.Store.YES));
-//			indexDoc.add(new StringField(AbstractSamplerIndexer.INDEX_VERTICAL_FIELD, "v2", Field.Store.YES));
+//			indexDoc.add(new StringField(AbstractSamplerIndexer.INDEX_VERTICAL_FIELD, "arxiv", Field.Store.YES));
 //			
 //			writer.addDocument(indexDoc);
 //			
@@ -431,10 +565,10 @@ public class Main {
 //			
 //			indexDoc = new org.apache.lucene.document.Document();
 //			indexDoc.add(new TextField(AbstractSamplerIndexer.INDEX_CONTENTS_FIELD,
-//					"remember remember sunday late talk cook food food other other other sunday sunday aggregator remember"
+//					"remember remember sunday late chopin talk cook chopin food food other other other sunday sunday aggregator remember"
 //					, Field.Store.NO));
 //			indexDoc.add(new StringField(AbstractSamplerIndexer.INDEX_DOC_NAME_FIELD, "d3", Field.Store.YES));
-//			indexDoc.add(new StringField(AbstractSamplerIndexer.INDEX_VERTICAL_FIELD, "v2", Field.Store.YES));
+//			indexDoc.add(new StringField(AbstractSamplerIndexer.INDEX_VERTICAL_FIELD, "arxiv", Field.Store.YES));
 //			
 //			writer.addDocument(indexDoc);
 //			
@@ -443,13 +577,53 @@ public class Main {
 //			writer.close();
 //			
 //			
-//			
+//			AbstractSelectionModel selection = AbstractSelectionModel.newInstance(collection);
+//			selection.resetIndex(index);
+//////			
+//			AbstractSelectionModel explain = new ExplainSelectionModel(AbstractSelectionModel.newInstance(collection), index);
+//////			
+//			System.out.println("RESULTS!!");
+//			explain.execute("remember chopin");
+////			
+////			
+//			for(Entry<String, Double> entry : selection.execute("remember chopin")) {
+//				System.out.println(entry.getKey() + "  " + entry.getValue());
+//			}
+			
+			
+			
+			
+//			QueryParser parser = new QueryParser(CommonUtils.LUCENE_VERSION, AbstractSamplerIndexer.INDEX_CONTENTS_FIELD, analyzer);
+//			Query query2 = parser.parse("remember");
+//			Set<Term> terms = new HashSet<Term>();
+//			query2.extractTerms(terms);
+//			System.out.println(terms);
+			
+			
 //			DirectoryReader ireader = DirectoryReader.open(index);
 //			IndexSearcher searcher = new IndexSearcher(ireader);
-//			UiSDocumentCentricSimilarity dcs = new UiSDocumentCentricSimilarity();
+//			UiSDocumentCentricSimilarity dcs = new UiSDocumentCentricSimilarity(collection);
 //			
 //			searcher.setSimilarity(dcs);
 //			
+////			Query query = new TestQuery(new Term(AbstractSamplerIndexer.INDEX_CONTENTS_FIELD, "rememb"),
+////					new Term(AbstractSamplerIndexer.INDEX_CONTENTS_FIELD, "rememb"));
+//			
+////			Query query = new PowTermQuery(new Term(AbstractSamplerIndexer.INDEX_CONTENTS_FIELD, "chopin"), 1);
+//			
+//			Query query = new DocumentCentricQuery((BooleanQuery)new QueryParser(CommonUtils.LUCENE_VERSION, AbstractSamplerIndexer.INDEX_CONTENTS_FIELD, analyzer).parse("remember chopin"));
+//			ScoreDoc[] hits = searcher.search(query, Integer.MAX_VALUE).scoreDocs;
+//			
+//			for (int i = 0; i < hits.length; i++) {
+//				org.apache.lucene.document.Document doc = ireader.document(hits[i].doc);
+//				System.out.println("\n\n\nDOC: " + hits[i].doc + "  " + hits[i].score + "  " + doc.get(AbstractSamplerIndexer.INDEX_DOC_NAME_FIELD) + " " + doc.get(AbstractSamplerIndexer.INDEX_VERTICAL_FIELD));
+//				
+//				System.out.println(searcher.explain(query, hits[i].doc) + "\n\n\n");
+//			}
+			
+			
+			
+			
 ////			MultiFields.getTerms(ireader, AbstractSamplerIndexer.INDEX_TEXT_FIELD).
 //			
 ////			System.out.println(MultiFields.getTerms(ireader, AbstractSamplerIndexer.INDEX_TEXT_FIELD));
@@ -590,18 +764,27 @@ public class Main {
 			
 			
 			
+
 			
-			
-			
+//			List<String> v = new ArrayList<String>();
+//			v.add("e119");
+////			for(int i = 160; i<=169; i++) {
+////				v.add(MessageFormat.format("e{0}", StringUtils.leftPad(String.valueOf(i), 3, '0')));
+////			}
+//			
 //			for(VerticalCollectionData data : collection.getVerticals()) {
 ////				if(data.getVertical().getId().equalsIgnoreCase("orgprints")) {
-//				if(data.getVerticalCollectionId().equalsIgnoreCase("e023")) {
-////				if(v.contains(data.getVerticalCollectionId())) {
+////				if(data.getVerticalCollectionId().equalsIgnoreCase("e001")) {
+//				if(v.contains(data.getVerticalCollectionId())) {
 //					DocumentAnalysis docAnalysis = new DocumentAnalysis(data.getVertical());
 //					docAnalysis.analyzeHTMLSample(MessageFormat.format("{0}-sample-docs/{1}", collection.getId(), data.getVerticalCollectionId()));
 //				}
 //			}
 			
+			
+//			AbstractSamplerIndexer indexer = AbstractSamplerIndexer.newInstance();
+//			indexer.storeIndex(MessageFormat.format("{0}-sample-docs", collection.getId()), collection);
+//			
 //			CollectionFactorEstimation size = new CollectionFactorEstimation(collection);
 //			size.estimateSize(MessageFormat.format("{0}-sample-docs", collection.getId()));
 			

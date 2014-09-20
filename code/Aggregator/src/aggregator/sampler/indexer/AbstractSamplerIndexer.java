@@ -26,8 +26,11 @@ public abstract class AbstractSamplerIndexer implements Closeable {
 	public static final String INDEX_VERTICAL_FIELD = "vertical";
 	
 	private static final String SAMPLER_INDEXER_KEY = "aggregator.sampler.indexer";
+	private static final String INDEX_USE_VERTICAL_NAME_KEY = "aggregator.sampler.indexer.useVerticalName";
+	private static final String INDEX_USE_VERTICAL_DESCRIPTION_KEY = "aggregator.sampler.indexer.useVerticalDescription";
 	private static final String INDEX_USE_DOCS_KEY = "aggregator.sampler.indexer.useDocs";
 	private static final String INDEX_USE_SNIPPETS_KEY = "aggregator.sampler.indexer.useSnippets";
+	private static final String INDEX_USE_WORDNET_KEY = "aggregator.sampler.indexer.useWordNet";
 	private static final String INDEX_NAME_KEY = "aggregator.sampler.indexer.name";
 	
 	protected Vertical vertical;
@@ -185,6 +188,24 @@ public abstract class AbstractSamplerIndexer implements Closeable {
 	
 	
 	/**
+	 * Gets if the index contains the vertical name in each document
+	 * @return True if the index contains the vertical name in each document
+	 */
+	public static final boolean isIndexVerticalName() {
+		return Boolean.parseBoolean(System.getProperty(INDEX_USE_VERTICAL_NAME_KEY, "false"));
+	}
+	
+	
+	/**
+	 * Gets if the index contains the vertical description in each document
+	 * @return True if the index contains the vertical description in each document
+	 */
+	public static final boolean isIndexVerticalDescription() {
+		return Boolean.parseBoolean(System.getProperty(INDEX_USE_VERTICAL_DESCRIPTION_KEY, "false"));
+	}
+	
+	
+	/**
 	 * Gets if the index contains the snippets
 	 * @return True if the index contains the snippets
 	 */
@@ -199,6 +220,15 @@ public abstract class AbstractSamplerIndexer implements Closeable {
 	 */
 	public static final boolean isIndexDocs() {
 		return Boolean.parseBoolean(System.getProperty(INDEX_USE_DOCS_KEY, "true"));
+	}
+	
+	
+	/**
+	 * Gets if the index contains the WordNet text
+	 * @return True if the index contains the WordNet text
+	 */
+	public static final boolean isIndexWordNet() {
+		return Boolean.parseBoolean(System.getProperty(INDEX_USE_WORDNET_KEY, "true"));
 	}
 
 

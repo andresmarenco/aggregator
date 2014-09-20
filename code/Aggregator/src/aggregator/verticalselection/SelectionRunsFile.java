@@ -19,6 +19,6 @@ public class SelectionRunsFile extends FileWriterHelper {
 	
 	
 	public void writeRunData(String topicId, String verticalCollectionId, int rank, double score, String runtag) {
-		this.writeLine(MessageFormat.format("{0} Q0 {1} {2} {3} {4}", topicId, verticalCollectionId, String.valueOf(rank), String.valueOf(score), runtag));
+		this.writeLine(MessageFormat.format("{0}\tQ0\t{1}\t{2}\t{3}\t{4}", topicId, verticalCollectionId, String.valueOf(rank), String.valueOf(score), runtag));
 	}
 }

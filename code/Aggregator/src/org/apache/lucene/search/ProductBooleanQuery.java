@@ -11,6 +11,7 @@ import java.util.Set;
 
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.apache.lucene.index.AtomicReaderContext;
+import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.search.BooleanClause;
 import org.apache.lucene.search.BooleanQuery;
@@ -59,6 +60,12 @@ public class ProductBooleanQuery extends BooleanQuery {
 	@Override
 	public Weight createWeight(IndexSearcher searcher) throws IOException {
 		return new ProductBooleanQueryWeight(searcher, this.isCoordDisabled());
+	}
+	
+	@Override
+	public Query rewrite(IndexReader reader) throws IOException {
+		System.out.println("ANOTHER REWRITE!!!!!!!!!");
+		return this;
 	}
 	
 	
@@ -113,10 +120,11 @@ public class ProductBooleanQuery extends BooleanQuery {
 		
 		@Override
 		public BulkScorer bulkScorer(AtomicReaderContext context, boolean scoreDocsInOrder, Bits acceptDocs) throws IOException {
-//			System.out.println("BULK SCORER!!!! " + minNrShouldMatch);
+			System.out.println("BULK SCORER!!!!");
 			
 			// Same as BooleanWeight, but changes the return class
 			if (scoreDocsInOrder || minNrShouldMatch > 1) {
+				System.out.println("BULK SCORER 1!!!!");
 				return super.bulkScorer(context, scoreDocsInOrder, acceptDocs);
 			}
 			
@@ -132,6 +140,7 @@ public class ProductBooleanQuery extends BooleanQuery {
 		    			return null;
 	    			}
 	    		} else if (c.isRequired()) {
+	    			System.out.println("BULK SCORER 2!!!!");
 	    			return super.bulkScorer(context, scoreDocsInOrder, acceptDocs);
     			} else if (c.isProhibited()) {
     				prohibited.add(subScorer);
@@ -141,7 +150,7 @@ public class ProductBooleanQuery extends BooleanQuery {
 	    	}
 
 		    
-//		    System.out.println("CREATING BOOLEAN SCORER");
+		    System.out.println("CREATING BOOLEAN SCORER");
 		    return new ProductBooleanScorer(this, ProductBooleanQuery.this.isCoordDisabled(), minNrShouldMatch, optional, prohibited, maxCoord);    
 		}
 		
@@ -226,7 +235,6 @@ public class ProductBooleanQuery extends BooleanQuery {
 				return result;
 			}
 		}
-		
 	}
 	
 	

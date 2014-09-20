@@ -9,6 +9,7 @@ import org.apache.lucene.index.FieldInvertState;
 import org.apache.lucene.index.NumericDocValues;
 import org.apache.lucene.search.CollectionStatistics;
 import org.apache.lucene.search.Explanation;
+import org.apache.lucene.search.Scorer;
 import org.apache.lucene.search.TermStatistics;
 import org.apache.lucene.search.similarities.BasicStats;
 import org.apache.lucene.search.similarities.Similarity;
@@ -147,7 +148,7 @@ public class UiSDocumentCentricSimilarity extends Similarity {
 	}
 	
 	
-	private static class DocumentCentricStats extends BasicStats {
+	public static class DocumentCentricStats extends BasicStats {
 		private String field;
 		
 		public DocumentCentricStats(String field, float queryBoost) {
@@ -163,7 +164,7 @@ public class UiSDocumentCentricSimilarity extends Similarity {
 	
 	
 	
-	static class DocumentCentricSimScorer extends SimScorer {
+	public static class DocumentCentricSimScorer extends SimScorer {
 	
 		/** Smoothing Parameter */
 		private static final float LAMBDA = 0.1f;
@@ -192,32 +193,44 @@ public class UiSDocumentCentricSimilarity extends Similarity {
 			return 1.0f / (distance + 1);
 		}
 		
-		protected float computePt() {
+		public float computePt() {
 			float result = 0;
 			long collectionTermFreq = stats.getTotalTermFreq();
 			long collectionTotalTerms = stats.getNumberOfFieldTokens();
 			
-			result = (BigDecimal.valueOf(collectionTermFreq).divide(BigDecimal.valueOf(collectionTotalTerms), CommonUtils.DEFAULT_DIVISION_SCALE, CommonUtils.DEFAULT_ROUNDING_MODE)).multiply(BigDecimal.valueOf(stats.getNumberOfDocuments())).floatValue();
+//			result = (BigDecimal.valueOf(collectionTermFreq).divide(BigDecimal.valueOf(collectionTotalTerms), CommonUtils.DEFAULT_DIVISION_SCALE, CommonUtils.DEFAULT_ROUNDING_MODE)).multiply(BigDecimal.valueOf(stats.getNumberOfDocuments())).floatValue();
+			
+			result = (BigDecimal.valueOf(collectionTermFreq).divide(BigDecimal.valueOf(collectionTotalTerms), CommonUtils.DEFAULT_DIVISION_SCALE, CommonUtils.DEFAULT_ROUNDING_MODE)).floatValue();
+//			result = (BigDecimal.valueOf(collectionTermFreq).divide(BigDecimal.valueOf(collectionTotalTerms), CommonUtils.DEFAULT_DIVISION_SCALE, CommonUtils.DEFAULT_ROUNDING_MODE)).divide(BigDecimal.valueOf(stats.getNumberOfDocuments()), CommonUtils.DEFAULT_DIVISION_SCALE, CommonUtils.DEFAULT_ROUNDING_MODE).floatValue();
 			
 //			result = (collectionTermFreq/collectionTotalTerms)*stats.getNumberOfDocuments();
+//			return (float)Math.log(result);
+			
 			return result;
 		}
 		
 		protected float computePtd(int doc, float freq) {
 			float result = 0;
-			long documentTotalTerms = docValues.get(doc);
-			
-			try
-			{
-				Document document = context.reader().document(doc);
-				VerticalCollectionData verticalData = verticalCollection.getVerticalData(document.get(AbstractSamplerIndexer.INDEX_VERTICAL_FIELD));
+			if(doc != Scorer.NO_MORE_DOCS) {
+				long documentTotalTerms = docValues.get(doc);
 				
-				result = (BigDecimal.valueOf(freq).divide(BigDecimal.valueOf(documentTotalTerms), CommonUtils.DEFAULT_DIVISION_SCALE, CommonUtils.DEFAULT_ROUNDING_MODE)).multiply(BigDecimal.valueOf(verticalData.getSampleSize())).floatValue();
+				try
+				{
+	//				Document document = context.reader().document(doc);
+	//				VerticalCollectionData verticalData = verticalCollection.getVerticalData(document.get(AbstractSamplerIndexer.INDEX_VERTICAL_FIELD));
+					
+	//				result = (BigDecimal.valueOf(freq).divide(BigDecimal.valueOf(documentTotalTerms), CommonUtils.DEFAULT_DIVISION_SCALE, CommonUtils.DEFAULT_ROUNDING_MODE)).multiply(BigDecimal.valueOf(verticalData.getSampleSize())).floatValue();
+					
+					result = (BigDecimal.valueOf(freq).divide(BigDecimal.valueOf(documentTotalTerms), CommonUtils.DEFAULT_DIVISION_SCALE, CommonUtils.DEFAULT_ROUNDING_MODE)).floatValue();
+	//				result = (BigDecimal.valueOf(freq).divide(BigDecimal.valueOf(documentTotalTerms), CommonUtils.DEFAULT_DIVISION_SCALE, CommonUtils.DEFAULT_ROUNDING_MODE)).divide(BigDecimal.valueOf(verticalData.getSampleSize()), CommonUtils.DEFAULT_DIVISION_SCALE, CommonUtils.DEFAULT_ROUNDING_MODE).floatValue();
+				}
+				catch(Exception ex) {
+					ex.printStackTrace();
+				}
+				
+	//			System.out.println(result);
+	//			return  (float)Math.log(result);
 			}
-			catch(Exception ex) {
-				ex.printStackTrace();
-			}
-			
 			
 			return result;
 		}
@@ -234,20 +247,17 @@ public class UiSDocumentCentricSimilarity extends Similarity {
 		
 		@Override
 		public Explanation explain(int doc, Explanation freq) {
-			Explanation result = new Explanation(this.score(doc, freq.getValue()), "score(doc="+doc+"), formula=(((1-LAMBDA)*P(t|d)) + (LAMBDA*P(t)))");
-
-			try
-			{
-				Document document = context.reader().document(doc);
-				VerticalCollectionData verticalData = verticalCollection.getVerticalData(document.get(AbstractSamplerIndexer.INDEX_VERTICAL_FIELD));
-				
-				
-				result.addDetail(new Explanation(LAMBDA, "Lambda"));
-				result.addDetail(new Explanation(this.computePt(), "P(t): collectionTermFreq=" + stats.getTotalTermFreq() + ", collectionTotalTerms=" + stats.getNumberOfFieldTokens() + ", docs=" + stats.getNumberOfDocuments()));
-				result.addDetail(new Explanation(this.computePtd(doc, freq.getValue()), "P(t|d): documentTermFreq=" + freq.getValue() + ", documentTotalTerms=" + docValues.get(doc) + ", sampleSize=" + verticalData.getSampleSize()));
-			}
-			catch(Exception ex) {
-				ex.printStackTrace();
+			Explanation result = new Explanation();
+			result.setValue(this.score(doc, freq.getValue()));
+			result.addDetail(new Explanation(LAMBDA, "Lambda"));
+			result.addDetail(new Explanation(this.computePt(), "P(t): collectionTermFreq=" + stats.getTotalTermFreq() + ", collectionTotalTerms=" + stats.getNumberOfFieldTokens()));
+			
+			if(doc != Scorer.NO_MORE_DOCS) {
+				result.setDescription("score(doc="+doc+"), formula=(((1-LAMBDA)*P(t|d)) + (LAMBDA*P(t)))");
+				result.addDetail(new Explanation(this.computePtd(doc, freq.getValue()), "P(t|d): documentTermFreq=" + freq.getValue() + ", documentTotalTerms=" + docValues.get(doc)));
+			} else {
+				result.setDescription("formula=(((1-LAMBDA)*P(t|d)) + (LAMBDA*P(t)))");
+				result.addDetail(new Explanation(this.computePtd(doc, freq.getValue()), "P(t|d): documentTermFreq=0"));
 			}
 			
 			return result;

@@ -44,12 +44,15 @@ public abstract class AbstractSelectionModel implements Closeable {
 	protected VerticalCollection collection;
 	protected Directory index;
 	protected DirectoryReader ireader;
+	protected final int rankCutOff;
+	protected final int maxAnalyzedDocuments;
 	protected Log log = LogFactory.getLog(AbstractSelectionModel.class);
 	
 	private static final String SELECTION_MODEL_KEY = "aggregator.verticalSelection.model";
 	private static final String EVALUATION_GDEVAL_KEY = "aggregator.evaluation.gdeval";
 	private static final String EVALUATION_TREC_EVAL_KEY = "aggregator.evaluation.trec_eval";
 	private static final String EVALUATION_QRELS_FILE_SUFFIX_KEY = "aggregator.evaluation.qrelsFileSuffix";
+	private static final String RANK_CUTOFF_KEY = "aggregator.verticalSelection.rankCutOff";
 	
 	
 	/**
@@ -57,8 +60,11 @@ public abstract class AbstractSelectionModel implements Closeable {
 	 * @param collection Vertical Collection
 	 */
 	public AbstractSelectionModel(VerticalCollection collection) {
+		this.rankCutOff = Integer.parseInt(System.getProperty(RANK_CUTOFF_KEY, "200"));
+		
 		if(collection != null) {
 			this.collection = collection;
+			this.maxAnalyzedDocuments = collection.getVerticals().size() * this.rankCutOff;
 			
 			try
 			{
@@ -69,6 +75,24 @@ public abstract class AbstractSelectionModel implements Closeable {
 			catch(Exception ex) {
 				log.error(ex.getMessage(), ex);
 			}
+		} else {
+			this.maxAnalyzedDocuments = Integer.MAX_VALUE;
+		}
+	}
+	
+	
+	
+	public void resetIndex(Directory index) {
+		try
+		{
+			if(this.index != null) { this.index.close(); }
+			if(this.ireader != null) { this.ireader.close(); }
+			
+			this.index = index;
+			this.ireader = DirectoryReader.open(index);
+		}
+		catch(Exception ex) {
+			log.error(ex.getMessage(), ex);
 		}
 	}
 	
@@ -118,16 +142,26 @@ public abstract class AbstractSelectionModel implements Closeable {
 	
 	
 	/**
+	 * Executes the test run for the collection and outputs the expected FedWeb evaluation file
+	 */
+	public void testQueries() {
+		this.testQueries(this.getModelCodeName());
+	}
+	
+	
+	
+	
+	/**
 	 * Executes the test run for the collection and outputs the expected FedWeb evaluation file 
 	 * @param runtag Run tag for the test run
 	 */
-	public void testQueries() {
+	public void testQueries(String runtag) {
 		try
 		{
 			Path runsFilePath = CommonUtils.getAnalysisPath()
 					.resolve(collection.getId().concat("-eval"))
 					.resolve(AbstractSamplerIndexer.getIndexName())
-					.resolve(this.getModelCodeName());
+					.resolve(runtag);
 	
 			try(BufferedReader reader = new BufferedReader(new FileReader(CommonUtils.getAnalysisPath().resolve(collection.getId() + "-topics.txt").toFile()));
 					SelectionRunsFile runsFile = new SelectionRunsFile(runsFilePath))
@@ -148,7 +182,7 @@ public abstract class AbstractSelectionModel implements Closeable {
 					int rank = 1;
 					
 					for(Map.Entry<String, Double> data : result) {
-						runsFile.writeRunData(topicId, collection.getVerticalCode(data.getKey()), rank++, data.getValue(), this.getModelCodeName());
+						runsFile.writeRunData(topicId, collection.getVerticalCode(data.getKey()), rank++, Math.log10(data.getValue()), this.getModelCodeName());
 					}
 				}
 			}
@@ -429,8 +463,8 @@ public abstract class AbstractSelectionModel implements Closeable {
 			isearcher.setSimilarity(getSimilarityModel());
 			
 			Query query = this.prepareQuery(queryString);
-			ScoreDoc[] hits = isearcher.search(query, null, 200).scoreDocs;
-			
+			ScoreDoc[] hits = isearcher.search(query, null, Integer.MAX_VALUE).scoreDocs;
+//			System.out.println("TOTAL: " + hits.length);
 			for(int i = 0; i < hits.length; i++) {
 				Document hitDoc = isearcher.doc(hits[i].doc);
 				String docId = hitDoc.get(AbstractSamplerIndexer.INDEX_DOC_NAME_FIELD);
@@ -438,6 +472,9 @@ public abstract class AbstractSelectionModel implements Closeable {
 				float score = hits[i].score;
 				
 				resultData.addResult(verticalName, i+1, docId, score);
+				if(resultData.isComplete()) {
+					break;
+				}
 			}
 		}
 		catch(Exception ex) {
@@ -509,7 +546,7 @@ public abstract class AbstractSelectionModel implements Closeable {
 	
 	
 	
-	protected static class CSIResultData {
+	protected class CSIResultData {
 		private int totalHits;
 		private Map<String, CSIVertical> verticals;
 		
@@ -526,6 +563,10 @@ public abstract class AbstractSelectionModel implements Closeable {
 		public int getTotalHits() {
 			return totalHits;
 		}
+		
+		public boolean isComplete() {
+			return totalHits >= maxAnalyzedDocuments;
+		}
 
 		/**
 		 * @return the verticals
@@ -541,21 +582,24 @@ public abstract class AbstractSelectionModel implements Closeable {
 				verticals.put(verticalName, value);
 			}
 			
-			value.addDocument(rank, docId, score);
-			this.totalHits++;
+			if(value.addDocument(rank, docId, score)) {
+				this.totalHits++;
+			}
 		}
 	}
 	
 	
 	
-	protected static class CSIVertical extends ArrayList<CSIDocument> {
+	protected class CSIVertical extends ArrayList<CSIDocument> {
 		private static final long serialVersionUID = 201408262132L;
+		private int count;
 		
 		/**
 		 * Default Constructor
 		 */
 		public CSIVertical() {
 			super();
+			this.count = 0;
 		}
 		
 		/**
@@ -596,16 +640,24 @@ public abstract class AbstractSelectionModel implements Closeable {
 		 * @param rank Rank of the found document
 		 * @param docId Document id
 		 * @param score Score obtained
+		 * @return true is the document was added
 		 */
-		public void addDocument(long rank, String docId, float score) {
-			this.add(new CSIDocument(rank, docId, score));
+		public boolean addDocument(long rank, String docId, float score) {
+			boolean added = false;
+			if(count < rankCutOff) {
+				this.add(new CSIDocument(rank, docId, score));
+				count++;
+				added = true;
+			}
+			
+			return added;
 		}
 	}
 	
 	
 	
 	
-	protected static class CSIDocument {
+	protected class CSIDocument {
 		private long rank;
 		private String docId;
 		private float score;

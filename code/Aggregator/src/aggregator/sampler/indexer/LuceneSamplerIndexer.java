@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.StringReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -41,7 +42,9 @@ import aggregator.dataaccess.DirectConnectionManager;
 import aggregator.dataaccess.VerticalDAO;
 import aggregator.sampler.output.IndexExecutionLogFile;
 import aggregator.util.CommonUtils;
+import aggregator.util.FileWriterHelper;
 import aggregator.util.IterableNodeList;
+import aggregator.util.LRUMap;
 import aggregator.util.XMLUtils;
 import aggregator.util.analysis.AggregatorAnalyzer;
 import aggregator.util.analysis.AggregatorTokenizerAnalyzer;
@@ -150,15 +153,19 @@ public class LuceneSamplerIndexer extends AbstractSamplerIndexer {
 			
 			try(IndexWriter writer = new IndexWriter(index, config)) {
 				
+				Path analysisFilePath = CommonUtils.getAnalysisPath();
 				for(VerticalCollectionData verticalData : collection.getVerticals()) {
-					Indexer indexer = new BasicIndexer(analysisPath, verticalData, indexLog, writer);
+					Indexer indexer = new BasicIndexer(analysisPath, verticalData, indexLog);
+					indexer = new VerticalMetaDataIndexer(indexer, isIndexVerticalName(), isIndexVerticalDescription());
+					
 					if(isIndexDocs()) indexer = new DocumentIndexer(indexer);
 					if(isIndexSnippets()) indexer = new SnippetIndexer(indexer);
+					if(isIndexWordNet()) indexer = new WordNetIndexer(indexer);
 					
 					verticalData.setSampleSize(0);
 					
 					// Reads the analyzed documents
-					try(Stream<Path> pathList = Files.walk(CommonUtils.getAnalysisPath().resolve(analysisPath).resolve(verticalData.getVerticalCollectionId()), 1)) {
+					try(Stream<Path> pathList = Files.walk(analysisFilePath.resolve(analysisPath).resolve(verticalData.getVerticalCollectionId()), 1)) {
 						Iterator<Path> pathIterator = pathList.iterator();
 						Path filePath;
 						
@@ -195,7 +202,7 @@ public class LuceneSamplerIndexer extends AbstractSamplerIndexer {
 					
 					}
 					
-					
+					int extraSize = indexer.finalize(writer);
 					verticalDAO.updateSampleSize(collection.getId(), verticalData.getVertical().getId(), verticalData.getSampleSize());
 				}
 			}
@@ -218,17 +225,18 @@ public class LuceneSamplerIndexer extends AbstractSamplerIndexer {
 		protected String analysisPath;
 		protected VerticalCollectionData verticalData;
 		protected IndexExecutionLogFile indexLog;
-		protected IndexWriter writer;
+		protected boolean indexVerticalName;
 		
-		public Indexer(String analysisPath, VerticalCollectionData verticalData, IndexExecutionLogFile indexLog, IndexWriter writer) {
+		public Indexer(String analysisPath, VerticalCollectionData verticalData, IndexExecutionLogFile indexLog) {
 			this.analysisPath = analysisPath;
 			this.verticalData = verticalData;
 			this.indexLog = indexLog;
-			this.writer = writer;
+			this.indexVerticalName = isIndexVerticalName();
 		}
 		
 		protected abstract Document indexDocument(String docName);
 		protected abstract void resetCurrentDocsFile(Path filePath);
+		protected abstract int finalize(IndexWriter writer) throws IOException;
 	}
 	
 	
@@ -236,8 +244,8 @@ public class LuceneSamplerIndexer extends AbstractSamplerIndexer {
 	
 	protected class BasicIndexer extends Indexer {
 
-		public BasicIndexer(String analysisPath, VerticalCollectionData verticalData, IndexExecutionLogFile indexLog, IndexWriter writer) {
-			super(analysisPath, verticalData, indexLog, writer);
+		public BasicIndexer(String analysisPath, VerticalCollectionData verticalData, IndexExecutionLogFile indexLog) {
+			super(analysisPath, verticalData, indexLog);
 		}
 
 		@Override
@@ -255,6 +263,11 @@ public class LuceneSamplerIndexer extends AbstractSamplerIndexer {
 		@Override
 		protected void resetCurrentDocsFile(Path filePath) {
 		}
+		
+		@Override
+		protected int finalize(IndexWriter writer) throws IOException {
+			return 0;
+		}
 	}
 	
 	
@@ -264,7 +277,7 @@ public class LuceneSamplerIndexer extends AbstractSamplerIndexer {
 		private Indexer decoratedIndexer;
 		
 		public IndexerDecorator(Indexer indexer) {
-			super(indexer.analysisPath, indexer.verticalData, indexer.indexLog, indexer.writer);
+			super(indexer.analysisPath, indexer.verticalData, indexer.indexLog);
 			this.decoratedIndexer = indexer;
 		}
 		
@@ -276,6 +289,39 @@ public class LuceneSamplerIndexer extends AbstractSamplerIndexer {
 		@Override
 		protected void resetCurrentDocsFile(Path filePath) {
 			decoratedIndexer.resetCurrentDocsFile(filePath);
+		}
+		
+		@Override
+		protected int finalize(IndexWriter writer) throws IOException {
+			return decoratedIndexer.finalize(writer);
+		}
+	}
+	
+	
+	
+	protected class VerticalMetaDataIndexer extends IndexerDecorator {
+		private boolean indexName;
+		private boolean indexDescription;
+
+		public VerticalMetaDataIndexer(Indexer indexer, boolean indexName, boolean indexDescription) {
+			super(indexer);
+			
+			this.indexName = indexName;
+			this.indexDescription = indexDescription;
+		}
+		
+		@Override
+		protected Document indexDocument(String docName) {
+			Document result = super.indexDocument(docName);
+			
+			if(indexName) {
+				result.add(new TextField(INDEX_CONTENTS_FIELD, verticalData.getVertical().getName(), Field.Store.NO));
+			}
+			if(indexDescription) {
+				result.add(new TextField(INDEX_CONTENTS_FIELD, verticalData.getVertical().getDescription(), Field.Store.NO));
+			}
+			
+			return result;
 		}
 	}
 	
@@ -321,13 +367,14 @@ public class LuceneSamplerIndexer extends AbstractSamplerIndexer {
 			
 			try
 			{
-				String terms = result.get(INDEX_CONTENTS_FIELD);
-				if(StringUtils.isNotBlank(terms)) {
-					terms = terms.concat(" ").concat(termsReader.readLine());
-				} else {
-					terms = termsReader.readLine();
-				}
-				
+//				String terms = result.get(INDEX_CONTENTS_FIELD);
+//				if(StringUtils.isNotBlank(terms)) {
+//					terms = terms.concat(" ").concat(termsReader.readLine());
+//				} else {
+//					terms = termsReader.readLine();
+//				}
+//				
+				String terms = termsReader.readLine();
 				result.add(new TextField(INDEX_CONTENTS_FIELD, terms, Field.Store.NO));
 			}
 			catch(Exception ex) {
@@ -407,7 +454,8 @@ public class LuceneSamplerIndexer extends AbstractSamplerIndexer {
 			// Finds the snippetNode
 			String snippetKey = MessageFormat.format("{0}{1}{2}{3}", analysisPath, verticalData.getVerticalCollectionId(), File.separator, docName);
 			indexLog.writeLogMessage("Retrieving snippet data from {0}...", snippetKey);
-			SnippetCache cache = snippetCache.get(snippetKey);
+//			SnippetCache cache = snippetCache.get(snippetKey);
+			SnippetCache cache = snippetCache.remove(snippetKey);
 			
 			if(cache != null) {
 				String snippetText = cache.getTitle();
@@ -415,17 +463,38 @@ public class LuceneSamplerIndexer extends AbstractSamplerIndexer {
 					snippetText = snippetText.concat(" ").concat(cache.getDescription());
 				}
 				
-				if(StringUtils.isNotBlank(snippetText)) {
-					String terms = result.get(INDEX_CONTENTS_FIELD);
-					if(StringUtils.isNotBlank(terms)) {
-						terms = terms.concat(" ").concat(snippetText);
-					} else {
-						terms = snippetText;
-					}
-				}
+				result.add(new TextField(INDEX_CONTENTS_FIELD, snippetText, Field.Store.NO));
 			}
 			
 			return result;
+		}
+		
+		
+		@Override
+		protected int finalize(IndexWriter writer) throws IOException {
+			int total = super.finalize(writer);
+			
+			log.info("Adding remaining snippets...");
+			indexLog.writeLogMessage("Adding remaining snippets...");
+			
+			Indexer indexer = new BasicIndexer(analysisPath, verticalData, indexLog);
+			indexer = new VerticalMetaDataIndexer(indexer, isIndexVerticalName(), isIndexVerticalDescription());
+			
+			for(Map.Entry<String, SnippetCache> element : snippetCache.entrySet()) {
+				Document doc = indexer.indexDocument(element.getKey());
+				String snippetText = element.getValue().getTitle();
+				if(StringUtils.isNotBlank(snippetText)) {
+					snippetText = snippetText.concat(" ").concat(element.getValue().getDescription());
+				}
+				
+				doc.add(new TextField(INDEX_CONTENTS_FIELD, snippetText, Field.Store.NO));
+				
+				writer.addDocument(doc);
+				
+				total++;
+			}
+			
+			return total;
 		}
 		
 		
@@ -447,250 +516,126 @@ public class LuceneSamplerIndexer extends AbstractSamplerIndexer {
 	
 	
 	
-//	
-//	
-//	
-//	
-//	
-//	
-//	
-//	
-//	
-//	/**
-//	 * Stores the documents from the given vertical
-//	 * @param analysisPath Analysis path
-//	 * @param verticalData Indexed vertical
-//	 * @param indexLog Index log
-//	 * @param writer Index writer
-//	 * @throws IOException
-//	 */
-//	private void storeDocsIndex(String analysisPath, VerticalCollectionData verticalData, IndexExecutionLogFile indexLog, IndexWriter writer) throws IOException {
-//		Files.walk(CommonUtils.getAnalysisPath().resolve(analysisPath).resolve(verticalData.getVerticalCollectionId()), 1).forEach(filePath -> {
-//			if (Files.isRegularFile(filePath)) {
-//				if(filePath.getFileName().toString().endsWith(".docs")) {
-//					Path docTerms = filePath.resolveSibling(
-//							StringUtils.removeEnd(filePath.getFileName().toString(), ".docs").concat(".docTerms"));
-//					
-//					log.info(MessageFormat.format("Reading {0} documents file with {1} terms file...", filePath.getFileName().toString(), docTerms.getFileName().toString()));
-//					indexLog.writeLogMessage("Reading {0} documents file with {1} terms file...", filePath.getFileName().toString(), docTerms.getFileName().toString());
-//					
-//					try(BufferedReader docsReader = new BufferedReader(new FileReader(filePath.toFile()));
-//							BufferedReader termsReader = new BufferedReader(new FileReader(docTerms.toFile()))) {
-//						
-//						// Get rid of the header line
-//						String docLine = docsReader.readLine();
-//						String termsLine = termsReader.readLine();
-//						
-//						while((docLine = docsReader.readLine()) != null) {
-//							termsLine = termsReader.readLine();
-//							Document indexDoc = this.createIndexDoc(docLine, termsLine, indexLog, verticalData);
-//							writer.addDocument(indexDoc);
-//						}
-//						
-//						log.info("Documents successfully indexed!");
-//						indexLog.writeLogMessage("Documents successfully indexed!");
-//					}
-//					catch(IOException ex) {
-//						log.error("Error reading files");
-//					}
-//				}
-//			}
-//		});
-//	}
-//	
-//	
-//	
-//	
-//	/**
-//	 * Stores the snippets from the given vertical
-//	 * @param analysisPath Analysis path
-//	 * @param verticalData Indexed vertical
-//	 * @param indexLog Index log
-//	 * @param writer Index writer
-//	 * @throws Exception
-//	 */
-//	private void storeSnippetsIndex(String analysisPath, VerticalCollectionData verticalData, IndexExecutionLogFile indexLog, IndexWriter writer) throws Exception {
-//		
-//		
-//		
-//
-//		// Reads the analyzed documents
-//		Files.walk(CommonUtils.getAnalysisPath().resolve(analysisPath).resolve(verticalData.getVerticalCollectionId()), 1).forEach(filePath -> {
-//			if (Files.isRegularFile(filePath)) {
-//				if(filePath.getFileName().toString().endsWith(".docs")) {
-//					log.info(MessageFormat.format("Reading {0} documents file...", filePath.getFileName().toString()));
-//					indexLog.writeLogMessage("Reading {0} documents file...", filePath.getFileName().toString());
-//					
-//					try(BufferedReader docsReader = new BufferedReader(new FileReader(filePath.toFile()))) {
-//						
-//						// Get rid of the header line
-//						String docLine = docsReader.readLine();
-//						
-//						while((docLine = docsReader.readLine()) != null) {
-//							String docName = docLine.substring(0, docLine.indexOf(","));
-//							
-//							Document indexDoc = new Document();
-//							indexDoc.add(new StringField(INDEX_DOC_NAME_FIELD, docName, Field.Store.YES));
-//							indexDoc.add(new StringField(INDEX_VERTICAL_FIELD, verticalData.getVertical().getId(), Field.Store.YES));
-//							
-//							// Finds the snippetNode
-//							String snippetKey = MessageFormat.format("{0}{1}{2}{3}", analysisPath, verticalData.getVerticalCollectionId(), File.separator, docName);
-//							indexLog.writeLogMessage("Retrieving snippet data from {0}...", snippetKey);
-//							SnippetCache cache = snippetCache.get(snippetKey);
-//							
-//							if(cache != null) {
-//								if(StringUtils.isNotBlank(cache.getTitle())) {
-//									indexDoc.add(new TextField(INDEX_TITLE_FIELD, cache.getTitle(), Field.Store.NO));
-//								}
-//								
-//								if(StringUtils.isNotBlank(cache.getDescription())) {
-//									indexDoc.add(new TextField(INDEX_SNIPPET_FIELD, cache.getDescription(), Field.Store.NO));
-//								}
-//							}
-//							
-//							writer.addDocument(indexDoc);
-//						}
-//						
-//						log.info("Documents successfully indexed!");
-//						indexLog.writeLogMessage("Documents successfully indexed!");
-//					}
-//					catch(IOException ex) {
-//						log.error("Error reading files");
-//					}
-//				}
-//			}
-//		});
-//	}
-//	
-//	
-//	
-//	
-//	/**
-//	 * Stores the documents and the snippets from the given vertical
-//	 * @param analysisPath Analysis path
-//	 * @param verticalData Indexed vertical
-//	 * @param indexLog Index log
-//	 * @param writer Index writer
-//	 * @throws Exception
-//	 */
-//	private void storeDocsSnippetsIndex(String analysisPath, VerticalCollectionData verticalData, IndexExecutionLogFile indexLog, IndexWriter writer) throws Exception {
-//		
-//		// Reading snippets XML document
-//		String snippetsFileName = analysisPath.replace("docs", "search");
-//		Path snippetsPath = CommonUtils.getSamplePath().resolve(snippetsFileName).resolve(verticalData.getVerticalCollectionId()).resolve(verticalData.getVerticalCollectionId().concat(".xml"));
-//
-//		log.info(MessageFormat.format("Reading snippets file {0}", snippetsPath.getFileName().toString()));
-//		indexLog.writeLogMessage("Reading snippets file {0}", snippetsPath.getFileName().toString());
-//		
-//		DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
-//		DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
-//		org.w3c.dom.Document xmlDoc = dBuilder.parse(snippetsPath.toFile());
-//		
-//		Map<String, SnippetCache> snippetCache = new HashMap<String, LuceneSamplerIndexer.SnippetCache>();
-//		NodeList snippetNodes = xmlUtils.executeXPath(xmlDoc, "./samples/search_results/snippets/snippet", NodeList.class);
-//		for(Node snippet : new IterableNodeList(snippetNodes)) {
-//			String titleNode = null, descriptionNode = null, linkNode = null;
-//			for(Node snippetChild : new IterableNodeList(snippet.getChildNodes())) {
-//				if(snippetChild.getNodeName().equals("link")) {
-//					Node cacheAttribute = snippetChild.getAttributes().getNamedItem("cache");
-//					if(cacheAttribute != null) {
-//						linkNode = snippetChild.getAttributes().getNamedItem("cache").getTextContent();
-//					}
-//				} else if(snippetChild.getNodeName().equals("title")) {
-//					titleNode = snippetChild.getTextContent().replaceAll("\\s+", " ");
-//				} else if(snippetChild.getNodeName().equals("description")) {
-//					descriptionNode = snippetChild.getTextContent().replaceAll("\\s+", " ");
-//				}
-//			}
-//			
-//			if(linkNode != null) {
-//				SnippetCache cache = new SnippetCache();
-//				cache.setDescription(descriptionNode);
-//				cache.setTitle(titleNode);
-//				snippetCache.put(linkNode, cache);
-//			}
-//		}
-//		
-//		// To empty the doc from main memory (the garbage collector should take care of this)
-//		xmlDoc = null;
-//		
-//
-//		// Reads the analyzed documents
-//		Files.walk(CommonUtils.getAnalysisPath().resolve(analysisPath).resolve(verticalData.getVerticalCollectionId()), 1).forEach(filePath -> {
-//			if (Files.isRegularFile(filePath)) {
-//				if(filePath.getFileName().toString().endsWith(".docs")) {
-//					Path docTerms = filePath.resolveSibling(
-//							StringUtils.removeEnd(filePath.getFileName().toString(), ".docs").concat(".docTerms"));
-//					
-//					log.info(MessageFormat.format("Reading {0} documents file with {1} terms file...", filePath.getFileName().toString(), docTerms.getFileName().toString()));
-//					indexLog.writeLogMessage("Reading {0} documents file with {1} terms file...", filePath.getFileName().toString(), docTerms.getFileName().toString());
-//					
-//					try(BufferedReader docsReader = new BufferedReader(new FileReader(filePath.toFile()));
-//							BufferedReader termsReader = new BufferedReader(new FileReader(docTerms.toFile()))) {
-//						
-//						// Get rid of the header line
-//						String docLine = docsReader.readLine();
-//						String termsLine = termsReader.readLine();
-//						
-//						while((docLine = docsReader.readLine()) != null) {
-//							termsLine = termsReader.readLine();
-//							Document indexDoc = this.createIndexDoc(docLine, termsLine, indexLog, verticalData);
-//							
-//							// Finds the snippetNode
-//							String snippetKey = MessageFormat.format("{0}{1}{2}{3}", analysisPath, verticalData.getVerticalCollectionId(), File.separator, indexDoc.get(INDEX_DOC_NAME_FIELD));
-//							indexLog.writeLogMessage("Retrieving snippet data from {0}...", snippetKey);
-//							SnippetCache cache = snippetCache.get(snippetKey);
-//							
-//							if(cache != null) {
-//								if(StringUtils.isNotBlank(cache.getTitle())) {
-//									indexDoc.add(new TextField(INDEX_TITLE_FIELD, cache.getTitle(), Field.Store.NO));
-//								}
-//								
-//								if(StringUtils.isNotBlank(cache.getDescription())) {
-//									indexDoc.add(new TextField(INDEX_SNIPPET_FIELD, cache.getDescription(), Field.Store.NO));
-//								}
-//							}
-//							
-//							writer.addDocument(indexDoc);
-//						}
-//						
-//						log.info("Documents successfully indexed!");
-//						indexLog.writeLogMessage("Documents successfully indexed!");
-//					}
-//					catch(IOException ex) {
-//						log.error("Error reading files");
-//					}
-//				}
-//			}
-//		});
-//	}
-//	
-//	
-//	
-//	
-//	/**
-//	 * Creates a basic index document
-//	 * @param docLine Line with the document data
-//	 * @param termsLine Line with the document terms
-//	 * @param indexLog Index log
-//	 * @param verticalData Indexed vertical
-//	 * @return Lucene document to index
-//	 */
-//	private Document createIndexDoc(String docLine, String termsLine, IndexExecutionLogFile indexLog, VerticalCollectionData verticalData) {
-//		String docName = docLine.substring(0, docLine.indexOf(","));
-//		String totalTerms = docLine.substring(0, docLine.lastIndexOf(","));
-//		totalTerms = totalTerms.substring(totalTerms.lastIndexOf(",")+1);
-//		
-//		indexLog.writeLogMessage("Indexing {0} with {1} terms", docName, totalTerms);
-//		
-//		// Creating document for the index
-//		Document indexDoc = new Document();
-//		indexDoc.add(new TextField(INDEX_CONTENTS_FIELD, termsLine, Field.Store.NO));
-//		indexDoc.add(new StringField(INDEX_DOC_NAME_FIELD, docName, Field.Store.YES));
-//		indexDoc.add(new StringField(INDEX_VERTICAL_FIELD, verticalData.getVertical().getId(), Field.Store.YES));
-//		
-//		return indexDoc;
-//	}
+	
+	protected class WordNetIndexer extends IndexerDecorator {
+		protected Path docTerms;
+		protected BufferedReader termsReader;
+		protected FileWriterHelper synFile;
+		protected Map<String, String> cache;
+		
+		private static final String WORDNET_KEY = "aggregator.sampler.indexer.WordNet";
+
+		public WordNetIndexer(Indexer indexer) {
+			super(indexer);
+			
+			cache = new LRUMap<String, String>(100000);
+		}
+		
+		@Override
+		protected void resetCurrentDocsFile(Path filePath) {
+			super.resetCurrentDocsFile(filePath);
+			
+			try
+			{
+				if(this.termsReader != null) {
+					this.termsReader.close();
+				}
+				
+				if(this.synFile != null) {
+					this.synFile.close();
+				}
+				
+				this.docTerms = filePath.resolveSibling(StringUtils.removeEnd(filePath.getFileName().toString(), ".docs").concat(".docTerms"));
+				this.termsReader = new BufferedReader(new FileReader(docTerms.toFile()));
+				
+				log.info(MessageFormat.format("Reading {0} terms file for WordNet...", docTerms.getFileName().toString()));
+				indexLog.writeLogMessage("Reading {0} terms file for WordNet...", docTerms.getFileName().toString());
+
+				this.synFile = new FileWriterHelper(filePath.resolveSibling(StringUtils.removeEnd(filePath.getFileName().toString(), ".docs").concat(".synonyms")));
+				this.synFile.open(false);
+				
+				this.cache.clear();
+				
+				// Get rid of the header line
+				termsReader.readLine();
+			}
+			catch(Exception ex) {
+				log.error(ex.getMessage(), ex);
+			}
+		}
+		
+		@Override
+		protected Document indexDocument(String docName) {
+			Document result = super.indexDocument(docName);
+			
+			try
+			{
+				log.info(MessageFormat.format("Finding synonyms for document {0} in vertical {1}...", docName, verticalData.getVerticalCollectionId()));
+				StringBuilder docSyns = new StringBuilder();
+				
+				String[] terms = termsReader.readLine().split("\\s+");
+				for(String term : terms) {
+					docSyns.append(this.findSynonyms(term));
+				}
+				
+				String docSynsStr = docSyns.toString().trim();
+				
+				result.add(new TextField(INDEX_CONTENTS_FIELD, docSynsStr, Field.Store.NO));
+				this.synFile.writeLine(docSynsStr);
+			}
+			catch(Exception ex) {
+				log.error(ex.getMessage(), ex);
+			}
+			
+			return result;
+		}
+		
+		protected String findSynonyms(String term) {
+			String result = cache.get(term);
+			
+			if(result == null) {
+				try
+				{
+					StringBuilder builder = new StringBuilder();
+					Process p = Runtime.getRuntime().exec(MessageFormat.format(System.getProperty(WORDNET_KEY), term, "-synsn"));
+					try(BufferedReader stdout = new BufferedReader(new InputStreamReader(p.getInputStream()))) {
+						String line;
+						
+						while ((line = stdout.readLine()) != null) {
+							if(StringUtils.startsWithIgnoreCase(line, "Sense")) {
+								String[] synonyms = stdout.readLine().split(",");
+								for(String t : synonyms) {
+									builder.append(t.trim()).append(" ");
+								}
+								
+								
+								line = stdout.readLine();
+								if(line != null) {
+									line = line.substring(line.indexOf("=> ") + 3);
+									String[] hypernyms = line.split(",");
+									
+									
+									for(String t : hypernyms) {
+										builder.append(t.trim()).append(" ");
+									}
+								}
+								
+								break;
+							}
+						}
+					}
+					p.waitFor();
+					
+					result = builder.toString();
+					cache.put(term, result);
+				}
+				catch(Exception ex) {
+					log.error(ex.getMessage(), ex);
+				}
+			}
+			return result;
+		}
+	}
 
 
 
