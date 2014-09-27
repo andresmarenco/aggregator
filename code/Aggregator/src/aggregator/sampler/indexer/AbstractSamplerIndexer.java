@@ -239,12 +239,20 @@ public abstract class AbstractSamplerIndexer implements Closeable {
 	 * @return List of found terms
 	 */
 	public abstract List<String> tokenize(SampledDocument<?> document);
+
+	/**
+	 * Tokenizes the given string
+	 * @param docId Document Id
+	 * @param text String to sample
+	 * @param more Extra string to sample
+	 * @return List of found terms
+	 */
+	public abstract List<String> tokenize(String docId, String text, String... more);
 	
 	/**
 	 * Stores all the tokenized terms in the main index
-	 * @param analysisPath Analysis path
 	 * @param collection Vertical collection
 	 */
-	public abstract void storeIndex(String analysisPath, VerticalCollection collection);
+	public abstract void storeIndex(VerticalCollection collection);
 	
 }

@@ -63,39 +63,4 @@ public abstract class AbstractSizeEstimation {
 			}
 		}
 	}
-	
-
-	
-	/**
-	 * Reads the term frequency/document frequency file
-	 * @param tfdfFile Term frequency/document frequency file
-	 * @return Term frequency/document frequency
-	 */
-	protected HashMap<String, TFDF> readTFDF(Path tfdfFile) {
-		HashMap<String, TFDF> result = new HashMap<String, TFDF>();
-		try
-		{
-			List<String> tfdfLines = Files.readAllLines(tfdfFile);
-			tfdfLines.remove(0);
-			
-			for(String line : tfdfLines) {
-				if(StringUtils.isNotBlank(line)) {
-					int lastIndex = line.lastIndexOf(',');
-					int df = Integer.parseInt(line.substring(lastIndex+1));
-					line = line.substring(0, lastIndex);
-					
-					lastIndex = line.lastIndexOf(',');
-					int tf = Integer.parseInt(line.substring(lastIndex+1));
-					line = line.substring(0, lastIndex);
-					
-					result.put(line, new TFDF(tf, df));
-				}
-			}
-		}
-		catch(Exception ex) {
-			log.error(ex.getMessage(), ex);
-		}
-		
-		return result;
-	}
 }

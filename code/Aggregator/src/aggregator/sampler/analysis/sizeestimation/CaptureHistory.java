@@ -18,6 +18,7 @@ import org.apache.commons.math3.stat.descriptive.SummaryStatistics;
 import aggregator.beans.QueryResult;
 import aggregator.beans.TFDF;
 import aggregator.beans.Vertical;
+import aggregator.sampler.analysis.DocumentAnalysis;
 import aggregator.sampler.output.QueryDocumentsLogFile;
 import aggregator.sampler.output.SizeEstimationExecutionLogFile;
 import aggregator.sampler.output.SizeEstimationStatsLogFile;
@@ -76,7 +77,7 @@ public class CaptureHistory extends AbstractSizeEstimation {
 				
 				// TF/DF file
 				estimationLog.writeLogMessage("Reading TF/DF file ({0})", tfdfFile.toString());
-				List<Map.Entry<String, TFDF>> tfdf = new ArrayList<Map.Entry<String,TFDF>>(this.readTFDF(tfdfFile).entrySet());
+				List<Map.Entry<String, TFDF>> tfdf = new ArrayList<Map.Entry<String,TFDF>>(DocumentAnalysis.readTFDF(tfdfFile).entrySet());
 				int tfdfSize = tfdf.size();
 				estimationLog.writeLogMessage("TF/DF file successfully read ({0} terms)", String.valueOf(tfdfSize));
 				

@@ -11,8 +11,8 @@ public interface IntermediateResults extends Closeable {
 	public void addDocumentTerms(String docId, List<String> foundTerms);
 	public void addFoundTerm(String term);
 	public void addNewTerm(String term);
-	public void addUniqueTerm(String term, long termFrequency);
-	public void increaseUniqueTermFrequencies(String term, long termFrequency, long documentFrequency);
+	public void addUniqueTerm(String term, long termFrequency, String document);
+	public void increaseUniqueTermFrequencies(String term, long termFrequency, String document);
 	public void clearFoundTerms();	
 	public void clearNewTerms();
 	public void dumpDocumentTerms(String analysisFileName);

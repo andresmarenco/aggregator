@@ -171,40 +171,40 @@ public class DatabaseIntermediateResults implements IntermediateResults {
 	
 	
 	@Override
-	public void addUniqueTerm(String term, long termFrequency) {
-		try(Connection connection = connectionManager.getConnection()) {
-			try(PreparedStatement stmt = connection.prepareStatement(
-					MessageFormat.format("insert into {0} (term, tf, df) values (?,?,?)", this.uniqueTermsTable))) {
-				
-				stmt.setString(1, term);
-				stmt.setLong(2, termFrequency);
-				stmt.setLong(3, 1);
-				stmt.execute();
-			}
-		}
-		catch(Exception ex) {
-			log.error(ex.getMessage(), ex);
-		}
+	public void addUniqueTerm(String term, long termFrequency, String document) {
+//		try(Connection connection = connectionManager.getConnection()) {
+//			try(PreparedStatement stmt = connection.prepareStatement(
+//					MessageFormat.format("insert into {0} (term, tf, df) values (?,?,?)", this.uniqueTermsTable))) {
+//				
+//				stmt.setString(1, term);
+//				stmt.setLong(2, termFrequency);
+//				stmt.setLong(3, 1);
+//				stmt.execute();
+//			}
+//		}
+//		catch(Exception ex) {
+//			log.error(ex.getMessage(), ex);
+//		}
 	}
 	
 	
 	
 	
 	@Override
-	public void increaseUniqueTermFrequencies(String term, long termFrequency, long documentFrequency) {
-		try(Connection connection = connectionManager.getConnection()) {
-			try(PreparedStatement stmt = connection.prepareStatement(
-					MessageFormat.format("update {0} set tf = tf+?, df = df+? where term=?", this.uniqueTermsTable))) {
-				
-				stmt.setLong(1, termFrequency);
-				stmt.setLong(2, documentFrequency);
-				stmt.setString(3, term);
-				stmt.execute();
-			}
-		}
-		catch(Exception ex) {
-			log.error(ex.getMessage(), ex);
-		}
+	public void increaseUniqueTermFrequencies(String term, long termFrequency, String document) {
+//		try(Connection connection = connectionManager.getConnection()) {
+//			try(PreparedStatement stmt = connection.prepareStatement(
+//					MessageFormat.format("update {0} set tf = tf+?, df = df+? where term=?", this.uniqueTermsTable))) {
+//				
+//				stmt.setLong(1, termFrequency);
+//				stmt.setLong(2, documentFrequency);
+//				stmt.setString(3, term);
+//				stmt.execute();
+//			}
+//		}
+//		catch(Exception ex) {
+//			log.error(ex.getMessage(), ex);
+//		}
 	}
 	
 	
@@ -296,26 +296,26 @@ public class DatabaseIntermediateResults implements IntermediateResults {
 	@Override
 	public void dumpTFDF(String analysisFileName) {
 		// Stores the term frequency/document frequency file
-		try(TFDFLogFile tfdfLog = TFDFLogFile.newInstance(analysisFileName)) {
-		
-			try(Connection connection = connectionManager.getConnection()) {
-				try(PreparedStatement stmt = connection.prepareStatement("select * from " + this.uniqueTermsTable);
-						ResultSet rs = stmt.executeQuery()) {
-					
-					while(rs.next()) {
-						tfdfLog.writeTFDF(new ImmutablePair<String, TFDF>(
-								rs.getString("term"),
-								new TFDF(
-										rs.getLong("tf"),
-										rs.getLong("df"))
-								));
-					}
-				}
-			}
-			catch(Exception ex) {
-				log.error(ex.getMessage(), ex);
-			}
-		}
+//		try(TFDFLogFile tfdfLog = TFDFLogFile.newInstance(analysisFileName)) {
+//		
+//			try(Connection connection = connectionManager.getConnection()) {
+//				try(PreparedStatement stmt = connection.prepareStatement("select * from " + this.uniqueTermsTable);
+//						ResultSet rs = stmt.executeQuery()) {
+//					
+//					while(rs.next()) {
+//						tfdfLog.writeTFDF(new ImmutablePair<String, TFDF>(
+//								rs.getString("term"),
+//								new TFDF(
+//										rs.getLong("tf"),
+//										rs.getLong("df"))
+//								));
+//					}
+//				}
+//			}
+//			catch(Exception ex) {
+//				log.error(ex.getMessage(), ex);
+//			}
+//		}
 	}
 	
 	
@@ -387,26 +387,28 @@ public class DatabaseIntermediateResults implements IntermediateResults {
 	
 	@Override
 	public Set<Entry<String, TFDF>> getUniqueTerms() {
-		Set<Entry<String, TFDF>> result = new HashSet<Entry<String,TFDF>>();
+//		Set<Entry<String, TFDF>> result = new HashSet<Entry<String,TFDF>>();
+//		
+//		try(Connection connection = connectionManager.getConnection()) {
+//			try(PreparedStatement stmt = connection.prepareStatement("select * from " + this.uniqueTermsTable);
+//					ResultSet rs = stmt.executeQuery()) {
+//				
+//				while(rs.next()) {
+//					result.add(new ImmutablePair<String, TFDF>(
+//							rs.getString("term"),
+//							new TFDF(
+//									rs.getLong("tf"),
+//									rs.getLong("df"))
+//							));
+//				}
+//			}
+//		}
+//		catch(Exception ex) {
+//			log.error(ex.getMessage(), ex);
+//		}
+//		return result;
 		
-		try(Connection connection = connectionManager.getConnection()) {
-			try(PreparedStatement stmt = connection.prepareStatement("select * from " + this.uniqueTermsTable);
-					ResultSet rs = stmt.executeQuery()) {
-				
-				while(rs.next()) {
-					result.add(new ImmutablePair<String, TFDF>(
-							rs.getString("term"),
-							new TFDF(
-									rs.getLong("tf"),
-									rs.getLong("df"))
-							));
-				}
-			}
-		}
-		catch(Exception ex) {
-			log.error(ex.getMessage(), ex);
-		}
-		return result;
+		return null;
 	}
 	
 	

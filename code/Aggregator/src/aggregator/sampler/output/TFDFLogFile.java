@@ -21,7 +21,7 @@ public class TFDFLogFile extends FileWriterHelper {
 		super(filePath);
 		this.open(false);
 		
-		this.writeLine("TERM,TF,DF");
+		this.writeLine("TERM,TF,DF,DOCS");
 	}
 
 	
@@ -52,7 +52,12 @@ public class TFDFLogFile extends FileWriterHelper {
 	 * @param tfdf Term frequency/document frequency
 	 */
 	public void writeTFDF(Map.Entry<String, TFDF> tfdf) {
-		this.writeLine(MessageFormat.format("{0},{1},{2}", tfdf.getKey(), tfdf.getValue().getTermFrequency(), tfdf.getValue().getDocumentFrequency()));
+		StringBuilder message = new StringBuilder(MessageFormat.format("{0},{1},{2},", tfdf.getKey(), String.valueOf(tfdf.getValue().getTermFrequency()), String.valueOf(tfdf.getValue().getDocumentFrequency())));
+		for(String doc : tfdf.getValue().getDocuments()) {
+			message.append(doc).append("|");
+		}
+		message.deleteCharAt(message.length()-1);
+		this.writeLine(message.toString());
 	}
 	
 	

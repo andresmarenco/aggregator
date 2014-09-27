@@ -15,5 +15,6 @@
 	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/PDFBox 1.8.6"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/Bouncy Castle 1.51"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/Apache POI 3.10.1"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/JWPL 1.0.0"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

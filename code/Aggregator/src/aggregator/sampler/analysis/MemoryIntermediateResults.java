@@ -57,15 +57,15 @@ public class MemoryIntermediateResults implements IntermediateResults {
 	}
 
 	@Override
-	public void addUniqueTerm(String term, long termFrequency) {
-		this.uniqueTerms.put(term, new TFDF(termFrequency, 1));
+	public void addUniqueTerm(String term, long termFrequency, String document) {
+		this.uniqueTerms.put(term, new TFDF(termFrequency, document));
 	}
 
 	@Override
-	public void increaseUniqueTermFrequencies(String term, long termFrequency, long documentFrequency) {
+	public void increaseUniqueTermFrequencies(String term, long termFrequency, String document) {
 		TFDF tfdf = this.uniqueTerms.get(term);
 		tfdf.incrementTermFrequency(termFrequency);
-		tfdf.incrementDocumentFrequency(documentFrequency);
+		tfdf.addDocument(document);
 	}
 
 	@Override

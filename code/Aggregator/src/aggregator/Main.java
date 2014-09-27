@@ -26,13 +26,21 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.stream.XMLInputFactory;
+import javax.xml.stream.XMLStreamConstants;
+import javax.xml.stream.XMLStreamReader;
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathFactory;
 
+import org.apache.commons.lang3.StringEscapeUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.math.NumberUtils;
 import org.apache.commons.math3.stat.descriptive.SummaryStatistics;
@@ -94,6 +102,15 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 
+import de.tudarmstadt.ukp.wikipedia.api.WikiConstants.Language;
+import de.tudarmstadt.ukp.wikipedia.parser.Link;
+import de.tudarmstadt.ukp.wikipedia.parser.ParsedPage;
+import de.tudarmstadt.ukp.wikipedia.parser.Template;
+import de.tudarmstadt.ukp.wikipedia.parser.mediawiki.FlushTemplates;
+import de.tudarmstadt.ukp.wikipedia.parser.mediawiki.MediaWikiParser;
+import de.tudarmstadt.ukp.wikipedia.parser.mediawiki.MediaWikiParserFactory;
+import de.tudarmstadt.ukp.wikipedia.parser.mediawiki.MediaWikiTemplateParser;
+import de.tudarmstadt.ukp.wikipedia.parser.mediawiki.ResolvedTemplate;
 import aggregator.beans.DOCSampledDocument;
 import aggregator.beans.PDFSampledDocument;
 import aggregator.beans.QueryResult;
@@ -103,11 +120,14 @@ import aggregator.beans.Vertical;
 import aggregator.beans.VerticalCategory;
 import aggregator.beans.VerticalCollection;
 import aggregator.beans.VerticalCollection.VerticalCollectionData;
+import aggregator.beans.WikiEntry.WikiEntryRevision;
 import aggregator.beans.VerticalConfig;
+import aggregator.beans.WikiEntry;
 import aggregator.beans.XMLSampledDocument;
 import aggregator.dataaccess.ConnectionManager;
 import aggregator.dataaccess.DirectConnectionManager;
 import aggregator.dataaccess.VerticalDAO;
+import aggregator.dataaccess.WikiDAO;
 import aggregator.sampler.AbstractSampler;
 import aggregator.sampler.analysis.DatabaseIntermediateResults;
 import aggregator.sampler.analysis.DocumentAnalysis;
@@ -116,6 +136,8 @@ import aggregator.sampler.analysis.sizeestimation.CollectionFactorEstimation;
 import aggregator.sampler.analysis.sizeestimation.SampleResample;
 import aggregator.sampler.indexer.AbstractSamplerIndexer;
 import aggregator.sampler.indexer.LuceneSamplerIndexer;
+import aggregator.sampler.indexer.WikiIndexer;
+import aggregator.sampler.indexer.WikiSplitter;
 import aggregator.sampler.output.SampledDocumentOutput;
 import aggregator.sampler.output.TFDFLogFile;
 import aggregator.sampler.output.TokensLogFile;
@@ -142,218 +164,110 @@ import aggregator.verticalwrapper.VerticalWrapperController;
 
 public class Main {
 	
+	public static class RunTest implements Runnable {
+		private int n;
+		
+		public RunTest(int n) {
+			super();
+			this.n = n;
+		}
+
+
+
+		@Override
+		public void run() {
+			try {
+				System.out.println("Starting thread " + n + "...");
+				Thread.sleep(5000);
+				System.out.println("Finishing thread " + n);
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+	}
+	
 	public static void main(String... args) {
 		CommonUtils.loadDefaultProperties();
 		try
 		{
-			/*SampledDocument doc = new SampledDocument();
-			doc.setTitle("TITLE");
-			doc.setText("TEXT");
+//			VerticalDAO dao = new VerticalDAO(DirectConnectionManager.getInstance());
+//			VerticalCollection collection = dao.loadVerticalCollection("FW13", true);
 			
-			SampledDocument doc2 = new SampledDocument();
-			doc2.setTitle("TITLE2");
-			doc2.setText("TEXT2");
-			
-			SamplerOutput samplerOutput = new FileSamplerOutput("vertical1");
-			samplerOutput.openResources();
-			samplerOutput.outputDocument(doc);
-			samplerOutput.outputDocument(doc2);
-			samplerOutput.closeResources();*/
-			
-			/*ConnectionManager cm = DirectConnectionManager.getInstance();
-			cm.getConnection().close();*/
-			
-//			SamplerOutputController soc = new SamplerOutputController();
-//			soc.newSamplerOutput("vertical1");
-			
-//			String xml = "<aa><dd><div class='meta'>"
-//					+ "<div class='list-title'>"
-//					+ "<span class='descriptor'>Title:</span>"
-//					+ "(Uniform) Convergence of Twisted Ergodic Averages"
-//					+ "</div>"
-//					+ "<div class='list-authors'>"
-//					+ "<span class='descriptor'>Authors:</span>"
-//					+ "<a href='/find/math/1/au:+Eisner_T/0/1/0/all/0/1'>Tanja Eisner</a>"
-//					+ ","
-//					+ "<a href='/find/math/1/au:+Krause_B/0/1/0/all/0/1'>Ben Krause</a>"
-//					+ "</div>"
-//					+ "<div class='list-comments'>"
-//					+ "<span class='descriptor'>Comments:</span>"
-//					+ "28 pages</div>"
-//					+ "<div class='list-subjects'>"
-//					+ "<span class='descriptor'>Subjects:</span>"
-//					+ "<span class='primary-subject'>Dynamical Systems (math.DS)</span>"
-//					+ "; Classical Analysis and ODEs (math.CA); Number Theory (math.NT)"
-//					+ "</div></div></dd></aa>";
-			
+//			WikiEntry entry = new WikiEntry();
+//			entry.setId(6899);
+//			entry.setTitle("test");
+//			entry.setNamespace(WikiEntry.NAMESPACE_ARTICLE);
+//			WikiEntryRevision r = entry.newEntryRevision();
+//			r.setId(1);
+//			entry.getRevisions().add(r);
 //			
-//			File file = new File("/home/andres/test.xml");
+//			WikiDAO dao = new WikiDAO(DirectConnectionManager.getInstance());
+//			dao.insertEntry(entry);
+			
+			WikiIndexer wiki = new WikiIndexer();
+//			wiki.execute("/mnt/data/cattest");
+			wiki.execute("/mnt/data/enwiki-latest-pages-articles.xml.000");
+			wiki.execute("/mnt/data/enwiki-latest-pages-articles.xml.001");
+			wiki.execute("/mnt/data/enwiki-latest-pages-articles.xml.002");
+			wiki.execute("/mnt/data/enwiki-latest-pages-articles.xml.003");
+			wiki.execute("/mnt/data/enwiki-latest-pages-articles.xml.004");
+			wiki.execute("/mnt/data/enwiki-latest-pages-articles.xml.005");
 //			
-//			BufferedReader br = new BufferedReader(new FileReader("/home/andres/test.xml"));
-//			StringBuilder text = new StringBuilder();
-//			String line = br.readLine();
+			
+//			WikiSplitter splitter = new WikiSplitter();
+//			splitter.execute();
+			
+//			ExecutorService es = Executors.newFixedThreadPool(10);
 //			
-//			while(line != null) {
-//				text.append(line);
-//				line = br.readLine();
+//			for(int i = 0; i < 50; i++) {
+//				System.out.println("Invoking thread " + i + "...");
+//				es.execute(new RunTest(i));
+////				es.
+//				if((i % 20) == 0) {
+//					es.shutdown();
+//					System.out.println("Waiting for running threads...");
+//					es.awaitTermination(1, TimeUnit.DAYS);
+////					while(!es.isTerminated()) {}
+//					System.out.println("Resuming test...");
+//					
+//					es = Executors.newFixedThreadPool(10);
+//				}
 //			}
 //			
-//			br.close();
+//			es.shutdown();
+//			es.awaitTermination(1, TimeUnit.DAYS);
+//			System.out.println("Done!!");
+
+//			System.out.println("63 BC births".replaceAll("\\u00A0", "C"));
 			
-//			System.out.println(text.toString());
+//			System.out.println(pp.getLinks().iterator().next().getText());
+//			System.out.println(pp.getLinks());
 			
+//			pp.
+//			pp.
 			
-//			DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
-//			DocumentBuilder db = dbf.newDocumentBuilder();
-//////			Document doc = db.parse(new InputSource(new StringReader("<div class=\"list-title\"><span class=\"descriptor\">Title:</span>  Tensor categories of endomorphisms and inclusions of von Neumann  algebras</div>")));
-//////			Document doc = db.parse(new InputSource(new StringReader("<div class='list-title'><span class='descriptor'>Title:</span>  Tensor categories of endomorphisms and inclusions of von Neumann  algebras</div>")));
-////			
-////			
-//			Document doc = db.parse(new File("/home/andres/test.xml"));
-//////			
-////////			Document doc = db.parse(new InputSource(new StringReader(text.toString())));
-////////			Document doc = db.parse(new InputSource(new StringReader(xml)));
-//////			
-//////			
-//////			
-//////////			
-//////			
-////////			
-////////			fis.close();
-//			XPathFactory xpf = XPathFactory.newInstance();
-//			XPath xp = xpf.newXPath();
-////			javax.xml.xpath.XPathExpression xpe = xp.compile("string(.//td[@class='biblinks']/a[contains(., 'BibTeX')]/@href)");
-//			javax.xml.xpath.XPathExpression xpe = xp.compile(".//span[@class='b_title']/preceding-sibling::node()");
+//			List<String> v = new ArrayList<String>();
+//			v.add("e120");
+//			for(int i = 13; i<=200; i++) {
+//				v.add(MessageFormat.format("e{0}", StringUtils.leftPad(String.valueOf(i), 3, '0')));
+//			}
 //			
-//			
-////			NodeList nodeList = XMLUtils.executeXPath(doc, expression, NodeList.class);
-//			
-////			Node nodeList = (Node)xpe.evaluate(doc, XPathConstants.NODE);
-//			
-//			Object n = xpe.evaluate(doc);
-//			System.out.println(n.getClass());
-//			
-//			Class<?> returnType = String.class;
-//			
-//			if(returnType == String.class) {
-//				StringBuilder builder = new StringBuilder();
-//				
-//				
-////				for(Node node : nodeList) {
-////					String content = node.getTextContent();
-////					if(StringUtils.isNotBlank(content)) {
-////						builder.append(content).append(" ");
-////					}
+//			for(VerticalCollectionData data : collection.getVerticals()) {
+////				if(v.contains(data.getVerticalCollectionId())) {
+//					DocumentAnalysis docAnalysis = new DocumentAnalysis(data.getVertical());
+//					docAnalysis.analyzeSnippetSample(MessageFormat.format("{0}-sample-search/{1}", collection.getId(), data.getVerticalCollectionId()));
 ////				}
-////				
-////				result = returnType.cast(builder.toString().replaceAll("\\s+", " "));
-//			} if(returnType == List.class) {
-//				List<String> resultList = new ArrayList<String>();
-////				for(Node node : nodeList) {
-////					String content = node.getTextContent();
-////					if(StringUtils.isNotBlank(content)) {
-////						resultList.add(content);
-////					}
-////				}
-////				
-////				result = returnType.cast(resultList);
-//			}
-//			
-//			
-			
-//			
-//			NodeList nodeList = (NodeList)xpe.evaluate(doc, XPathConstants.NODESET);
-//			for(Node n : new IterableNodeList(nodeList)) {
-//				System.out.println(n.getTextContent());
-////				if(n instanceof Element)
-////					System.out.println(XMLUtils.serializeDOM((Element)n, false, true));
-////				else
-////					System.out.println(n);
 //			}
 			
+//			dao.updateSampleSize(collection.getId(), collection.getVerticals().iterator().next().getVerticalCollectionId(), 1);
+//			DocumentAnalysis.computeTFDF(collection, MessageFormat.format("{0}-sample-docs", collection.getId()));
 			
-//			Object textNode = xpe.evaluate(doc);
-//			System.out.println(textNode);
-			
-			
-//			Node node = (Node)xpe.evaluate(doc, XPathConstants.NODE);
-//			System.out.println(XMLUtils.serializeDOM((Element)node, false, true));
-			
-//			System.out.println(r);
-			
-			
-//			
-////			System.out.println(XMLUtils.serializeDOM(doc));
-//			NodeList list = (NodeList) xpe.evaluate(doc, XPathConstants.NODESET);
-////			
-//			Node node = list.item(0);
-//			xpe = xp.compile("substring-after(.//div[@class='list-title'], 'Title:')");
-//			Object r = xpe.evaluate(node);
-//			
-//			
-////			Node n = (Node)xpe.evaluate(node, XPathConstants.NODE);
-////						
-////			System.out.println(XMLUtils.serializeDOM((Element)n, false, true));
-////			
-////			xpe = xp.compile("/self::*");
-////			Object r = xpe.evaluate(doc);
-////			
-//			System.out.println(r);
-//			
+//			try(BufferedReader reader = new BufferedReader(new FileReader(file)))
 			
 			
 			
-//			Document nd = db.newDocument();
-//			nd.appendChild(nd.adoptNode(node.cloneNode(true)));
-//			
-//			System.out.println("ND:\n" + XMLUtils.serializeDOM(nd));
-//			
-//			xpe = xp.compile(".//div[@class='list-title']/text()");
-//			Object n = xpe.evaluate(nd);
-//			System.out.println(n);
-			
-//			Node n = (Node)xpe.evaluate(nd, XPathConstants.NODE);
-			
-//			System.out.println(XMLUtils.serializeDOM((Element)n, false, true));
-			
-//			Object n = xpe.evaluate(node);
-//			System.out.println("TEXT " + n.getTextContent());
-//			System.out.println("------------" + n.getNodeValue());
-			
-			
-//			javax.xml.xpath.XPathExpression xpe = xp.compile(".//div[@class='list-title']/text()");
-			
-//			NodeList nl = (NodeList) xpe.evaluate(doc, XPathConstants.NODESET);
-//			
-//			System.out.println(nl.item(0).getTextContent());
-			
-//			Object n = xpe.evaluate(doc);
-//			System.out.println(n);
-			
-			
-//			System.out.println(XMLUtils.serializeDOM(doc));
-			
-//			file.
-			
-//			FileInputStream fis = new FileInputStream("/home/andres/aggregator/sample/FW13-sample-docs/e075/5000_06.doc");
-//			HWPFDocument doc = new HWPFDocument(fis);
-//			WordExtractor word = new WordExtractor(doc);
-//			
-////			System.out.println(word.getDocSummaryInformation().);
-//			for(String s : word.getParagraphText()) {
-//				System.out.println(s);
-//			}
-			
-//			for(Property p : word.getDocSummaryInformation().getProperties()) {
-//				System.out.println(p.getID() + "  " + p.getValue());
-//			}
-			
-			
-			
-//////			
-			VerticalDAO dao = new VerticalDAO(DirectConnectionManager.getInstance());
-			VerticalCollection collection = dao.loadVerticalCollection("FW13", true);
-			
+				
 //			Analyzer analyzer = new AggregatorAnalyzer(CommonUtils.LUCENE_VERSION);
 //			Directory index = new NIOFSDirectory(CommonUtils.getIndexPath().resolve(collection.getId()).resolve(AbstractSamplerIndexer.getIndexName()).toFile());
 //			try(IndexReader reader = DirectoryReader.open(index)) {
@@ -389,11 +303,10 @@ public class Main {
 			
 			
 			
-//			DocumentAnalysis.computeTFDF(collection, MessageFormat.format("{0}-sample-docs", collection.getId()));
 			
 			
 //			AbstractSamplerIndexer indexer = AbstractSamplerIndexer.newInstance();
-//			indexer.storeIndex(MessageFormat.format("{0}-sample-docs", collection.getId()), collection);
+//			indexer.storeIndex(collection);
 			
 //			try(BufferedReader reader = new BufferedReader(new FileReader("/home/andres/debug"))) {
 //				String line;
@@ -422,21 +335,21 @@ public class Main {
 //			}
 			
 			
-			try(AbstractSelectionModel selection = AbstractSelectionModel.newInstance(collection)) {
-//				AbstractSelectionModel explain = new ExplainSelectionModel(selection);
-//				explain.execute("LHC collision publications");
+//			try(AbstractSelectionModel selection = AbstractSelectionModel.newInstance(collection)) {
+////				AbstractSelectionModel explain = new ExplainSelectionModel(selection);
+////				explain.execute("LHC collision publications");
+////				
+////				List<Entry<String, Double>> result = selection.execute("LHC collision publications");
 //				
-//				List<Entry<String, Double>> result = selection.execute("LHC collision publications");
-				
-//				for(Entry<String, Double> d : result) {
-//				for(int i = 0; i < result.size(); i++) {
-//					Entry<String, Double> d = result.get(i);
-//					System.out.println((i+1) + " -  " + d.getKey() + "  " + Math.log10(d.getValue()));
-//				}
-				
-//////////	
-				selection.testQueries(selection.getModelCodeName() + 1000);
-			}
+////				for(Entry<String, Double> d : result) {
+////				for(int i = 0; i < result.size(); i++) {
+////					Entry<String, Double> d = result.get(i);
+////					System.out.println((i+1) + " -  " + d.getKey() + "  " + Math.log10(d.getValue()));
+////				}
+//				
+////////////	
+//				selection.testQueries(selection.getModelCodeName() + 1000);
+//			}
 			
 //			dao.updateSampleSize(collection.getId(), "4shared", 10);
 			
