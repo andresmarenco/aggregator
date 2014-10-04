@@ -22,6 +22,7 @@ import aggregator.verticalwrapper.VerticalWrapperController;
 public abstract class AbstractSamplerIndexer implements Closeable {
 	
 	public static final String INDEX_CONTENTS_FIELD = "contents";
+	public static final String INDEX_TITLE_FIELD = "title";
 	public static final String INDEX_DOC_NAME_FIELD = "docName";
 	public static final String INDEX_VERTICAL_FIELD = "vertical";
 	
@@ -31,7 +32,11 @@ public abstract class AbstractSamplerIndexer implements Closeable {
 	private static final String INDEX_USE_DOCS_KEY = "aggregator.sampler.indexer.useDocs";
 	private static final String INDEX_USE_SNIPPETS_KEY = "aggregator.sampler.indexer.useSnippets";
 	private static final String INDEX_USE_WORDNET_KEY = "aggregator.sampler.indexer.useWordNet";
+	private static final String INDEX_USE_WIKI_DOC_ENRICHMENT_KEY = "aggregator.sampler.indexer.useWikiDocEnrichment";
 	private static final String INDEX_NAME_KEY = "aggregator.sampler.indexer.name";
+	private static final String INDEX_WIKI_NAME_KEY = "aggregator.sampler.indexer.wiki.name";
+	private static final String INDEX_WIKI_TOP_WORDS_KEY = "aggregator.sampler.indexer.wiki.topWords";
+	private static final String INDEX_WIKI_TOP_DOCS_KEY = "aggregator.sampler.indexer.wiki.topDocs";
 	
 	protected Vertical vertical;
 	protected SamplerParser samplerParser;
@@ -185,6 +190,15 @@ public abstract class AbstractSamplerIndexer implements Closeable {
 	public static final String getIndexName() {
 		return System.getProperty(INDEX_NAME_KEY);
 	}
+
+	
+	/**
+	 * Gets the name of the wiki index
+	 * @return Name of the wii index
+	 */
+	public static final String getWikiIndexName() {
+		return System.getProperty(INDEX_WIKI_NAME_KEY);
+	}
 	
 	
 	/**
@@ -228,7 +242,34 @@ public abstract class AbstractSamplerIndexer implements Closeable {
 	 * @return True if the index contains the WordNet text
 	 */
 	public static final boolean isIndexWordNet() {
-		return Boolean.parseBoolean(System.getProperty(INDEX_USE_WORDNET_KEY, "true"));
+		return Boolean.parseBoolean(System.getProperty(INDEX_USE_WORDNET_KEY, "false"));
+	}
+	
+	
+	/**
+	 * Gets if the index contains the Wikipedia Document enrichment
+	 * @return True if the index contains the Wikipedia Document enrichment
+	 */
+	public static final boolean isIndexWikiDocEnrichment() {
+		return Boolean.parseBoolean(System.getProperty(INDEX_USE_WIKI_DOC_ENRICHMENT_KEY, "false"));
+	}
+	
+	
+	/**
+	 * Gets the amount of words used for a wiki search
+	 * @return Amount of words used for a wiki search
+	 */
+	public static final int getWikiTopWords() {
+		return Integer.parseInt(System.getProperty(INDEX_WIKI_TOP_WORDS_KEY, "1"));
+	}
+	
+	
+	/**
+	 * Gets the amount of documents used for a wiki enrichment
+	 * @return Amount of documents used for a wiki enrichment
+	 */
+	public static final int getWikiTopDocs() {
+		return Integer.parseInt(System.getProperty(INDEX_WIKI_TOP_DOCS_KEY, "1"));
 	}
 
 

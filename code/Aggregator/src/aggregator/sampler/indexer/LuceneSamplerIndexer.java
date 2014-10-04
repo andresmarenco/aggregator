@@ -2,13 +2,18 @@ package aggregator.sampler.indexer;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.StringReader;
+import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.text.MessageFormat;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
@@ -21,7 +26,11 @@ import java.util.stream.Stream;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
+import org.apache.commons.lang.math.NumberUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.mutable.MutableDouble;
+import org.apache.commons.lang3.mutable.MutableFloat;
+import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
@@ -29,8 +38,17 @@ import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
 import org.apache.lucene.document.StringField;
 import org.apache.lucene.document.TextField;
+import org.apache.lucene.index.DirectoryReader;
+import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig;
+import org.apache.lucene.index.Term;
+import org.apache.lucene.search.BooleanClause.Occur;
+import org.apache.lucene.search.BooleanQuery;
+import org.apache.lucene.search.IndexSearcher;
+import org.apache.lucene.search.Query;
+import org.apache.lucene.search.ScoreDoc;
+import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.NIOFSDirectory;
 import org.w3c.dom.Node;
@@ -223,21 +241,27 @@ public class LuceneSamplerIndexer extends AbstractSamplerIndexer {
 			IndexWriterConfig config = new IndexWriterConfig(CommonUtils.LUCENE_VERSION, indexerAnalyzer);
 			config.setSimilarity(AbstractSelectionModel.getDefaultSimilary());
 			
+			Path keywordsPath = CommonUtils.getAnalysisPath().resolve(collection.getId());
+			
 			try(IndexWriter writer = new IndexWriter(index, config)) {
 				for(VerticalCollectionData verticalData : collection.getVerticals()) {
 					Set<String> docs = new LinkedHashSet<String>();
 					Path docsPath = this.readFirstDocsFile(docs, indexLog, CommonUtils.getAnalysisPath().resolve(collection.getId() + "-sample-docs").resolve(verticalData.getVerticalCollectionId()));
-					Path snippetsPath = this.readFirstDocsFile(docs, indexLog, CommonUtils.getAnalysisPath().resolve(collection.getId() + "-sample-search").resolve(verticalData.getVerticalCollectionId()));
+					int docsCount = docs.size();
 					
-					Indexer indexer = new BasicIndexer(verticalData, indexLog);
+					Path snippetsPath = this.readFirstDocsFile(docs, indexLog, CommonUtils.getAnalysisPath().resolve(collection.getId() + "-sample-search").resolve(verticalData.getVerticalCollectionId()));
+					int snippetsCount = docs.size();
+					
+					Indexer indexer = new BasicIndexer(indexerAnalyzer, verticalData, indexLog);
 					indexer = new VerticalMetaDataIndexer(indexer, isIndexVerticalName(), isIndexVerticalDescription());
 					
-					if(isIndexDocs()) indexer = new DocumentIndexer(indexer, docsPath);
-					if(isIndexSnippets()) indexer = new SnippetIndexer(indexer, snippetsPath);
+					if(isIndexDocs()) indexer = new DocumentIndexer(indexer, docsPath, docsCount);
+					if(isIndexSnippets()) indexer = new SnippetIndexer(indexer, snippetsPath, snippetsCount);
 					if(isIndexWordNet()) indexer = new WordNetIndexer(indexer);
-					
+					if(isIndexWikiDocEnrichment()) indexer = new WikiDocEnrichment(indexer, keywordsPath);
 					
 					verticalData.setSampleSize(0);
+//					int count=5;
 					
 					for(String docID : docs) {
 						Document indexedDoc = indexer.indexDocument(docID);
@@ -245,6 +269,10 @@ public class LuceneSamplerIndexer extends AbstractSamplerIndexer {
 							writer.addDocument(indexedDoc);
 							verticalData.setSampleSize(verticalData.getSampleSize()+1);
 						}
+						
+//						 FIXME
+//						if(--count < 0)
+//						break;
 					}
 					
 					verticalDAO.updateSampleSize(collection.getId(), verticalData.getVerticalCollectionId(), verticalData.getSampleSize());
@@ -253,6 +281,9 @@ public class LuceneSamplerIndexer extends AbstractSamplerIndexer {
 					indexLog.writeLogMessage("{0} documents successfully indexed!", verticalData.getSampleSize());
 					
 					indexer.close();
+					
+					// FIXME
+//					break;
 				}
 			}
 			
@@ -370,12 +401,16 @@ public class LuceneSamplerIndexer extends AbstractSamplerIndexer {
 	protected abstract class Indexer {
 		protected VerticalCollectionData verticalData;
 		protected IndexExecutionLogFile indexLog;
+		protected Analyzer indexerAnalyzer;
 		private Map<String, TFDF> tfdfs;
+		private int docsCount;
 		
-		public Indexer(VerticalCollectionData verticalData, IndexExecutionLogFile indexLog) {
+		public Indexer(Analyzer indexerAnalyzer, VerticalCollectionData verticalData, IndexExecutionLogFile indexLog) {
 			this.verticalData = verticalData;
 			this.indexLog = indexLog;
 			this.tfdfs = new HashMap<String, TFDF>();
+			this.docsCount = 0;
+			this.indexerAnalyzer = indexerAnalyzer;
 		}
 		
 		protected abstract Document indexDocument(String docName);
@@ -385,21 +420,57 @@ public class LuceneSamplerIndexer extends AbstractSamplerIndexer {
 			this.tfdfs.clear();
 		}
 		
+		/**
+		 * @return the docsCount
+		 */
+		public int getDocsCount() {
+			return docsCount;
+		}
+
+		/**
+		 * @param docsCount the docsCount to set
+		 */
+		public void setDocsCount(int docsCount) {
+			this.docsCount = docsCount;
+		}
+
+
+		/**
+		 * @param docsCount the docsCount to set
+		 */
+		public void incrementDocsCount(int docsCount) {
+			this.docsCount += docsCount;
+		}
+
 		protected void addTFDFs(Path docsPath) {
 			Path tfdfPath = docsPath.resolveSibling(StringUtils.removeEnd(docsPath.getFileName().toString(), ".docs").concat(".tfdf"));
 			log.info(MessageFormat.format("Reading {0} TFDF file...", tfdfPath.toString()));
 			indexLog.writeLogMessage("Reading {0} TFDF file...", tfdfPath.toString());
-			for(Map.Entry<String, TFDF> entry : DocumentAnalysis.readTFDF(tfdfPath).entrySet()) {
-				TFDF tfdf = this.getTFDFs().get(entry.getKey());
-				if(tfdf == null) {
-					this.getTFDFs().put(entry.getKey(), entry.getValue());
-				} else {
-					tfdf.incrementTermFrequency(entry.getValue().getTermFrequency());
-					for(String tfdfDoc : entry.getValue().getDocuments()) {
-						tfdf.addDocument(tfdfDoc);
-					}
-				}
-			}
+			
+//			for(Map.Entry<String, TFDF> entry : DocumentAnalysis.readTFDF(tfdfPath).entrySet()) {
+//				
+//				try(TokenStream tokenStream = indexerAnalyzer.tokenStream(null, entry.getKey())) {
+//					tokenStream.reset();
+//				
+//					if(tokenStream.incrementToken()) {
+//						String term = tokenStream.getAttribute(CharTermAttribute.class).toString();
+//						
+//						TFDF tfdf = this.getTFDFs().get(term);
+//						if(tfdf == null) {
+//							this.getTFDFs().put(term, entry.getValue());
+//						} else {
+//							tfdf.incrementTermFrequency(entry.getValue().getTermFrequency());
+//							for(String tfdfDoc : entry.getValue().getDocuments()) {
+//								tfdf.addDocument(tfdfDoc);
+//							}
+//						}
+//					}
+//				
+//				}
+//				catch(Exception ex) {
+//					log.error(ex.getMessage(), ex);
+//				}
+//			}
 		}
 	}
 	
@@ -408,8 +479,8 @@ public class LuceneSamplerIndexer extends AbstractSamplerIndexer {
 	
 	protected class BasicIndexer extends Indexer {
 
-		public BasicIndexer(VerticalCollectionData verticalData, IndexExecutionLogFile indexLog) {
-			super(verticalData, indexLog);
+		public BasicIndexer(Analyzer indexerAnalyzer, VerticalCollectionData verticalData, IndexExecutionLogFile indexLog) {
+			super(indexerAnalyzer, verticalData, indexLog);
 		}
 
 		@Override
@@ -440,7 +511,7 @@ public class LuceneSamplerIndexer extends AbstractSamplerIndexer {
 		private Indexer decoratedIndexer;
 		
 		public IndexerDecorator(Indexer indexer) {
-			super(indexer.verticalData, indexer.indexLog);
+			super(indexer.indexerAnalyzer, indexer.verticalData, indexer.indexLog);
 			this.decoratedIndexer = indexer;
 		}
 		
@@ -462,6 +533,21 @@ public class LuceneSamplerIndexer extends AbstractSamplerIndexer {
 		@Override
 		protected void close() {
 			decoratedIndexer.close();
+		}
+		
+		@Override
+		public int getDocsCount() {
+			return decoratedIndexer.getDocsCount();
+		}
+		
+		@Override
+		public void setDocsCount(int docsCount) {
+			decoratedIndexer.setDocsCount(docsCount);
+		}
+		
+		@Override
+		public void incrementDocsCount(int docsCount) {
+			decoratedIndexer.incrementDocsCount(docsCount);
 		}
 	}
 	
@@ -501,9 +587,10 @@ public class LuceneSamplerIndexer extends AbstractSamplerIndexer {
 		protected BufferedReader termsReader;
 		protected Path docsPath;
 		
-		public DocumentIndexer(Indexer indexer, Path docsPath) {
+		public DocumentIndexer(Indexer indexer, Path docsPath, int docsCount) {
 			super(indexer);
 			this.docsPath = docsPath;
+			this.setDocsCount(docsCount);
 			this.init();
 		}
 		
@@ -600,13 +687,14 @@ public class LuceneSamplerIndexer extends AbstractSamplerIndexer {
 //		protected Map<String, SnippetCache> snippetCache;
 //		protected XMLUtils xmlUtils;
 		
-		protected Map<String, String> snippetCache;
+		protected Map<String, SnippetCache> snippetCache;
 		protected Path snippetsPath;
 		
-		public SnippetIndexer(Indexer indexer, Path snippetsPath) {
+		public SnippetIndexer(Indexer indexer, Path snippetsPath, int docsCount) {
 			super(indexer);
 			
 			this.snippetsPath = snippetsPath;
+			this.setDocsCount(docsCount);
 //			this.xmlUtils = new XMLUtils();
 			this.initSnippetsCache();
 			
@@ -621,7 +709,7 @@ public class LuceneSamplerIndexer extends AbstractSamplerIndexer {
 //		}
 		
 		private void initSnippetsCache() {
-			this.snippetCache = new HashMap<String, String>();
+			this.snippetCache = new HashMap<String, SnippetCache>();
 			
 			try(BufferedReader docsReader = new BufferedReader(new FileReader(snippetsPath.toFile()));
 					BufferedReader termsReader = new BufferedReader(new FileReader(snippetsPath.resolveSibling(snippetsPath.getFileName().toString().replace(".docs", ".docTerms")).toFile())))
@@ -631,7 +719,14 @@ public class LuceneSamplerIndexer extends AbstractSamplerIndexer {
 				termsReader.readLine();
 				
 				while((docsLine = docsReader.readLine()) != null) {
-					this.snippetCache.put(docsLine.substring(0, docsLine.indexOf(',')), termsReader.readLine());
+					SnippetCache snippet = new SnippetCache();
+					String title = docsLine.substring(docsLine.indexOf(',')+1, docsLine.lastIndexOf(','));
+					title = title.substring(title.indexOf(',')+1, title.lastIndexOf(','));
+					
+					snippet.setTitle(title);
+					snippet.setDescription(termsReader.readLine());
+					
+					this.snippetCache.put(docsLine.substring(0, docsLine.indexOf(',')), snippet);
 				}
 			}
 			catch(Exception ex) {
@@ -691,9 +786,10 @@ public class LuceneSamplerIndexer extends AbstractSamplerIndexer {
 		protected Document indexDocument(String docName) {
 			Document result = super.indexDocument(docName);
 			
-			String data = this.snippetCache.remove(docName);
+			SnippetCache data = this.snippetCache.remove(docName);
 			if(data != null) {
-				result.add(new TextField(INDEX_CONTENTS_FIELD, data, Field.Store.NO));
+				result.add(new StringField(INDEX_TITLE_FIELD, data.getTitle(), Field.Store.YES));
+				result.add(new TextField(INDEX_CONTENTS_FIELD, data.getDescription(), Field.Store.NO));
 			}
 			
 //			
@@ -718,18 +814,194 @@ public class LuceneSamplerIndexer extends AbstractSamplerIndexer {
 		
 		
 		
-//		private class SnippetCache {
-//			private String title;
-//			private String description;
-//			
-//			public SnippetCache() {}
-//			
-//			public String getTitle() { return title; }
-//			public void setTitle(String title) { this.title = StringUtils.isNotBlank(title) ? title : ""; }
-//
-//			public String getDescription() { return description; }
-//			public void setDescription(String description) { this.description = StringUtils.isNotBlank(description) ? description : ""; }
-//		}
+		private class SnippetCache {
+			private String title;
+			private String description;
+			
+			public SnippetCache() {}
+			
+			public String getTitle() { return title; }
+			public void setTitle(String title) { this.title = StringUtils.isNotBlank(title) ? title : ""; }
+
+			public String getDescription() { return description; }
+			public void setDescription(String description) { this.description = StringUtils.isNotBlank(description) ? description : ""; }
+		}
+	}
+	
+	
+	
+	protected class WikiDocEnrichment extends IndexerDecorator {
+		
+		protected Path keywordsPath;
+		protected Directory index;
+		protected IndexReader ireader;
+		protected IndexSearcher searcher;
+		protected final int topWords = getWikiTopWords();
+		protected final int topDocs = getWikiTopDocs();
+		protected final Comparator<Map.Entry<String, MutableDouble>> sortComparator = new Comparator<Map.Entry<String, MutableDouble>>() {
+	    	@Override
+	    	public int compare(Entry<String, MutableDouble> o1, Entry<String, MutableDouble> o2) {
+	    		return o1.getValue().compareTo(o2.getValue());
+	    	}
+		}.reversed();
+		
+		public WikiDocEnrichment(Indexer indexer, Path keywordsPath) {
+			super(indexer);
+			
+			this.initWiki();
+			this.keywordsPath = keywordsPath.resolve(verticalData.getVerticalCollectionId());
+		}
+		
+		protected void initWiki() {
+			try
+			{
+				Path indexPath = CommonUtils.getIndexPath().resolve(getWikiIndexName());
+				index = new NIOFSDirectory(indexPath.toFile());
+				ireader = DirectoryReader.open(index);
+				searcher = new IndexSearcher(ireader);
+			}
+			catch(Exception ex) {
+				log.error(ex.getMessage(), ex);
+			}
+		}
+		
+		protected List<Map.Entry<String, MutableDouble>> calculateTFIDF(String docName, String terms) {
+			List<Map.Entry<String, MutableDouble>> tfidf = new ArrayList<Map.Entry<String,MutableDouble>>();
+			
+			Path keywordsDoc = this.keywordsPath.resolve(docName + ".keywords");
+			if(Files.exists(keywordsDoc)) {
+				try(FileReader in = new FileReader(keywordsDoc.toFile());
+						BufferedReader reader = new BufferedReader(in)) {
+					
+					String line;
+					int total = 0;
+					while((line = reader.readLine()) != null) {
+						String[] data = line.split("\\|");
+						tfidf.add(new ImmutablePair<String, MutableDouble>(data[0], new MutableDouble(Double.parseDouble(data[1]))));
+						
+						if(++total >= topWords) {
+							break;
+						}
+					}
+				}
+				catch(Exception ex) {
+					log.error(ex.getMessage(), ex);
+				}
+				
+			} else {
+				
+				try(TokenStream tokenStream = indexerAnalyzer.tokenStream(null, new StringReader(terms))) {
+					tokenStream.reset();
+					
+					Map<String, MutableDouble> tfidfMap = new HashMap<String, MutableDouble>();
+						
+					// Tokenizes the document elements and gets the term frequency
+				    while (tokenStream.incrementToken()) {
+				    	String term = tokenStream.getAttribute(CharTermAttribute.class).toString();
+				    	if(!NumberUtils.isNumber(term) && !term.equals("h2")) {
+					    	MutableDouble value = tfidfMap.get(term);
+					    	if(value == null) {
+					    		value = new MutableDouble(0);
+					    		tfidfMap.put(term, value);
+					    	}
+					    	value.increment();
+				    	}
+				    }
+				    
+				    BigDecimal N = BigDecimal.valueOf(this.getDocsCount());
+				    for(Map.Entry<String, MutableDouble> entry : tfidfMap.entrySet()) {
+				    	int tf = entry.getValue().intValue();
+				    	TFDF tfdf = this.getTFDFs().get(entry.getKey());
+				    	
+				    	if(tfdf != null) {
+					    	double idf = Math.log(N.divide(BigDecimal.valueOf(tfdf.getDocumentFrequency()), CommonUtils.DEFAULT_DIVISION_SCALE, CommonUtils.DEFAULT_ROUNDING_MODE).doubleValue());
+					    	
+					    	entry.getValue().setValue(tf * idf);
+					    	tfidf.add(entry);
+				    	}
+				    }
+				    
+				    Collections.sort(tfidf, sortComparator);
+				    
+				    
+				    try(FileWriterHelper fwriter = new FileWriterHelper(keywordsDoc)) {
+				    	fwriter.open(false);
+				    	
+				    	for(Map.Entry<String, MutableDouble> entry : tfidf) {
+				    		fwriter.writeLine(entry.getKey() + "|" + String.valueOf(entry.getValue().toDouble()));
+				    	}
+				    }
+				    
+				    tfidf = tfidf.subList(0, Math.min(topWords, tfidf.size()));
+				    
+				}
+				catch(Exception ex) {
+					log.error(ex.getMessage(), ex);
+				}
+				
+			}
+			
+			return tfidf;
+		}
+		
+		@Override
+		protected Document indexDocument(String docName) {
+			Document result = super.indexDocument(docName);
+			String terms = result.get(INDEX_CONTENTS_FIELD);
+			List<Map.Entry<String, MutableDouble>> tfidf = this.calculateTFIDF(docName, terms);
+			BooleanQuery query = new BooleanQuery();
+			
+			indexLog.writeLogMessage("Enriching document using top {0} words and top {1} documents...", topWords, topDocs);
+			log.info(MessageFormat.format("Enriching document using top {0} words and top {1} documents...", topWords, topDocs));
+			for(Map.Entry<String, MutableDouble> entry : tfidf) {
+				query.add(new TermQuery(new Term(AbstractSamplerIndexer.INDEX_CONTENTS_FIELD, entry.getKey())), Occur.SHOULD);
+			}
+			
+			indexLog.writeLogMessage("Document {0} ({1}). Searching in wiki: {2}...", result.get(INDEX_TITLE_FIELD), result.get(INDEX_DOC_NAME_FIELD), query.toString());
+			log.info(MessageFormat.format("Document {0} ({1}). Searching in wiki: {2}...", result.get(INDEX_TITLE_FIELD), result.get(INDEX_DOC_NAME_FIELD), query.toString()));
+			try
+			{
+				ScoreDoc[] hits = searcher.search(query, topDocs+10).scoreDocs;
+				int total = 0;
+				
+				for (int i = 0; i < hits.length; i++) {
+					Document wikiDoc = ireader.document(hits[i].doc);
+					
+					if((!StringUtils.containsIgnoreCase(wikiDoc.get(INDEX_TITLE_FIELD), "(disambiguation)") &&
+							(!StringUtils.startsWith(wikiDoc.get(INDEX_TITLE_FIELD), "List of ")))) {
+						indexLog.writeLogMessage("Adding wiki document for enrichment: {0} ({1})", wikiDoc.get(INDEX_TITLE_FIELD), wikiDoc.get(INDEX_DOC_NAME_FIELD));
+						log.info(MessageFormat.format("Adding wiki document for enrichment: {0} ({1})", wikiDoc.get(INDEX_TITLE_FIELD), wikiDoc.get(INDEX_DOC_NAME_FIELD)));
+						
+						result.add(new TextField(INDEX_CONTENTS_FIELD, wikiDoc.get(AbstractSamplerIndexer.INDEX_CONTENTS_FIELD), Field.Store.NO));
+						
+						if(++total >= topDocs) {
+							break;
+						}
+					}
+				}
+			}
+			catch(Exception ex) {
+				log.error(ex.getMessage(), ex);
+			}
+						
+			return result;
+		}
+		
+		
+		@Override
+		protected void close() {
+			super.close();
+
+			try
+			{
+				ireader.close();
+				index.close();
+			}
+			catch(Exception ex) {
+				log.error(ex.getMessage(), ex);
+			}
+		}
+		
 	}
 	
 	

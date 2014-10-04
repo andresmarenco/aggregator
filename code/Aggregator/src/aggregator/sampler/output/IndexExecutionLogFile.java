@@ -64,7 +64,7 @@ public class IndexExecutionLogFile extends FileWriterHelper {
 	 * @param pattern Message to log
 	 * @param arguments Arguments for the message
 	 */
-	public void writeLogMessage(String pattern, Object... arguments) {
+	public synchronized void writeLogMessage(String pattern, Object... arguments) {
 		this.writeLine(MessageFormat.format("[{0}] {1}", LocalDateTime.now().toString(timestampPattern), MessageFormat.format(pattern, arguments)));
 	}
 	

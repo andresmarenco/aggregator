@@ -19,6 +19,7 @@ import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
 import org.apache.lucene.document.LongField;
+import org.apache.lucene.document.StringField;
 import org.apache.lucene.document.TextField;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig;
@@ -51,216 +52,122 @@ public class WikiIndexer {
 	/**
 	 * Indexes the Wikipedia dump
 	 */
-	public void execute(String file) {
+	public void execute() {
 		try(Analyzer analyzer = new AggregatorAnalyzer(CommonUtils.LUCENE_VERSION))
 		{
 			log.info("Starting Wikipedia indexing process...");
 			
-			long counter = 0;
-			ExecutorService executor = Executors.newFixedThreadPool(THREAD_POOL_SIZE);
+			// Lucene Index
+			log.info("Creating Lucene Index...");
+			Path indexPath = CommonUtils.getIndexPath().resolve(AbstractSamplerIndexer.getWikiIndexName());
+			Directory index = new NIOFSDirectory(indexPath.toFile());
 			
-			// XML Dump of Wiki
-			log.info("Reading Wikipedia dump...");
-			XMLInputFactory inputFactory = XMLInputFactory.newInstance();
-			try(InputStream in = new FileInputStream(file)) {
-				XMLStreamReader reader = inputFactory.createXMLStreamReader(in);
+			IndexWriterConfig config = new IndexWriterConfig(CommonUtils.LUCENE_VERSION, analyzer);
+			
+			try(IndexWriter writer = new IndexWriter(index, config)) {
+				// XML Dump of Wiki
+				log.info("Reading Wikipedia dump...");
+				XMLInputFactory inputFactory = XMLInputFactory.newInstance();
 				
-				// Lucene Index
-				log.info("Creating Lucene Index...");
-				Path indexPath = CommonUtils.getIndexPath().resolve("wiki");
-				Directory index = new NIOFSDirectory(indexPath.toFile());
+				String[] files = { "/mnt/data/enwiki-latest-pages-articles.xml.000",
+						"/mnt/data/enwiki-latest-pages-articles.xml.001",
+						"/mnt/data/enwiki-latest-pages-articles.xml.002",
+						"/mnt/data/enwiki-latest-pages-articles.xml.003",
+						"/mnt/data/enwiki-latest-pages-articles.xml.004",
+						"/mnt/data/enwiki-latest-pages-articles.xml.005"};
 				
-				IndexWriterConfig config = new IndexWriterConfig(CommonUtils.LUCENE_VERSION, analyzer);
+				for(String f : files) {
 				
-				try(IndexWriter writer = new IndexWriter(index, config)) {
-					WikiEntry entry = null;
-					WikiEntryRevision revision = null;
-					
-					while(reader.hasNext()) {
-						int event = reader.next();
+				
+					try(InputStream in = new FileInputStream(f)) {
+						XMLStreamReader reader = inputFactory.createXMLStreamReader(in);
 						
-						switch(event) {
-						case XMLStreamConstants.START_ELEMENT: {
-							String tagName = reader.getLocalName();
-							if("page".equals(tagName)) {
-								entry = new WikiEntry();
-							} else if("revision".equals(tagName)) {
-								revision = entry.newEntryRevision();
-							} else if("redirect".equals(tagName)) {
-								entry.setRedirect(reader.getAttributeValue(0));
-							} else if("text".equals(tagName)) {
-								revision.setText(reader.getElementText());
-							} else if("id".equals(tagName)) {
-								if(revision == null) {
-									entry.setId(Long.parseLong(reader.getElementText()));
-								} else {
-									revision.setId(Long.parseLong(reader.getElementText()));
+						WikiEntry entry = null;
+						WikiEntryRevision revision = null;
+						
+						while(reader.hasNext()) {
+							int event = reader.next();
+							
+							switch(event) {
+							case XMLStreamConstants.START_ELEMENT: {
+								String tagName = reader.getLocalName();
+								if("page".equals(tagName)) {
+									entry = new WikiEntry();
+								} else if("revision".equals(tagName)) {
+									revision = entry.newEntryRevision();
+								} else if("redirect".equals(tagName)) {
+									entry.setRedirect(reader.getAttributeValue(0));
+								} else if("text".equals(tagName)) {
+									revision.setText(reader.getElementText());
+								} else if("id".equals(tagName)) {
+									if(revision == null) {
+										entry.setId(Long.parseLong(reader.getElementText()));
+									} else {
+										revision.setId(Long.parseLong(reader.getElementText()));
+									}
+								} else if("ns".equals(tagName)) {
+									entry.setNamespace(Integer.parseInt(reader.getElementText()));
+								} else if("title".equals(tagName)) {
+									entry.setTitle(reader.getElementText());
 								}
-							} else if("ns".equals(tagName)) {
-								entry.setNamespace(Integer.parseInt(reader.getElementText()));
-							} else if("title".equals(tagName)) {
-								entry.setTitle(reader.getElementText());
+								break;
 							}
-							break;
-						}
-						
-						case XMLStreamConstants.END_ELEMENT: {
-							String tagName = reader.getLocalName();
-							if("revision".equals(tagName)) {
-								entry.getRevisions().add(revision);
-								revision = null;
-							} else if("page".equals(tagName)) {
-								counter++;
-//								System.out.println(entry.getTitle());
-//								if(entry.getId() == 733767) {
-									WikiEntry clone = entry.clone();
-//									clone.getLastRevision().parseText();
-									executor.execute(new WikiEntryDatabase(wikiDAO, clone));
+							
+							case XMLStreamConstants.END_ELEMENT: {
+								String tagName = reader.getLocalName();
+								if("revision".equals(tagName)) {
+									entry.getRevisions().add(revision);
+									revision = null;
+								} else if("page".equals(tagName)) {
+									log.info(MessageFormat.format("Adding Wikipedia entry {0} ({1})", entry.getTitle(), String.valueOf(entry.getId())));
+									wikiDAO.insertEntry(entry);
 									
-									System.out.println(clone);
 									
-//									executor.shutdown();
-//									executor.awaitTermination(1, TimeUnit.DAYS);
-//									in.close();
-//									reader.close();
-//									writer.close();
+//									switch(entry.getNamespace()) {
 //									
-//									return;
-//								} else {
-//									log.info("Ignoring " + entry.getId());
-//								}
-								
-//								switch(entry.getNamespace()) {
-//								
-//								case WikiEntry.NAMESPACE_ARTICLE: {
-//									for(String category : entry.getLastRevision().getCategories()) {
-//										if(category.startsWith("Disambiguation ") || category.startsWith("Lists ") ||
-//												category.startsWith("List-Class ") || category.equals("Lists") ||
-//												category.startsWith("Template-Class ") || category.startsWith("Templates ") || category.equals("Templates")) {
-//											entry.setContentPage(false);
-//											break;
-//										}
-//									}
-//									
-//									if(entry.isContentPage()) {
-//										log.info(MessageFormat.format("Indexing Wikipedia entry {0} ({1})", entry.getTitle(), String.valueOf(entry.getId())));
+//									case WikiEntry.NAMESPACE_ARTICLE: {
 //										WikiEntryRevision lastRevision = entry.getLastRevision();
 //										
-//										Document wikiDoc = new Document();
-//										wikiDoc.add(new LongField(AbstractSamplerIndexer.INDEX_DOC_NAME_FIELD,  entry.getId(), Field.Store.YES));
-//										wikiDoc.add(new TextField(AbstractSamplerIndexer.INDEX_CONTENTS_FIELD, lastRevision.getText(), Field.Store.YES));
+//										for(String category : lastRevision.getCategories()) {
+////											System.out.println(category);
+//											if(category.startsWith("Disambiguation") || category.startsWith("Lists") ||
+//													category.equals("Set indices") ||
+//													category.startsWith("List-Class") || 
+//													category.startsWith("Template-Class") || category.startsWith("Templates")) {
+//												entry.setContentPage(false);
+////												System.out.println("NO CONTENT!!!!!!!!!!!!!!!!!!!!!!");
+//												break;
+//											}
+//										}
 //										
-//										writer.addDocument(wikiDoc);
+//										if(entry.isContentPage()) {
+//											log.info(MessageFormat.format("Indexing Wikipedia entry {0} ({1})", entry.getTitle(), String.valueOf(entry.getId())));
+//											
+//											Document wikiDoc = new Document();
+//											wikiDoc.add(new LongField(AbstractSamplerIndexer.INDEX_DOC_NAME_FIELD,  entry.getId(), Field.Store.YES));
+//											wikiDoc.add(new TextField(AbstractSamplerIndexer.INDEX_CONTENTS_FIELD, lastRevision.getText(), Field.Store.YES));
+//											wikiDoc.add(new StringField(AbstractSamplerIndexer.INDEX_TITLE_FIELD, entry.getTitle(), Field.Store.YES));
+//											
+//											writer.addDocument(wikiDoc);
+//										}
+//										
+//										break;
 //									}
-//									
-////									log.info(MessageFormat.format("Adding Wikipedia entry {0} ({1})", entry.getTitle(), String.valueOf(entry.getId())));
-////									wikiDAO.insertEntry(entry);
-//									
-//									break;
-//								}
-//								}
-//								
-//								
-//								if((counter % 250) == 0) {
-//									executor.shutdown();
-//									log.info("Waiting for running threads...");
-//									executor.awaitTermination(1, TimeUnit.DAYS);
-//									log.info("Resuming process...");
-//									
-//									executor = Executors.newFixedThreadPool(THREAD_POOL_SIZE);
-//								}
-								
-								
-								
-								
-								
-								
-								
-								
-//								
-//								if(entry.getNamespace() == WikiEntry.NAMESPACE_CATEGORY) {
-//									log.info(MessageFormat.format("Adding Wikipedia entry {0} ({1})", entry.getTitle(), String.valueOf(entry.getId())));
-//									wikiDAO.insertEntry(entry);
-//								}
-//								WikiEntry clone = entry.clone();
-								
-//								executor.execute(new WikiEntryDatabase(wikiDAO, clone));
-//								executor.execute(new WikiEntryIndexer(writer, clone));
-								
-//								wikiDAO.insertEntry(entry);
-								
-//								log.info(MessageFormat.format("Adding Wikipedia entry {0} ({1})", entry.getTitle(), String.valueOf(entry.getId())));
-//								wikiDAO.insertEntry(entry);
-//								
-//								if((entry.getNamespace() == WikiEntry.NAMESPACE_ARTICLE) && (!entry.isRedirect())) {
-//									log.info(MessageFormat.format("Indexing Wikipedia entry {0} ({1})", entry.getTitle(), String.valueOf(entry.getId())));
-//									WikiEntryRevision lastRevision = entry.getLastRevision();
-//									
-//									Document wikiDoc = new Document();
-//									wikiDoc.add(new LongField(AbstractSamplerIndexer.INDEX_DOC_NAME_FIELD,  entry.getId(), Field.Store.YES));
-//									wikiDoc.add(new TextField(AbstractSamplerIndexer.INDEX_CONTENTS_FIELD, lastRevision.getText(), Field.Store.YES));
-//									
-//									writer.addDocument(wikiDoc);
-//								}
-//								
-//								
-//								if((entry.getId() % 10000) == 0) {
-////									executor.shutdown();
-////									log.info("Waiting for running threads...");
-////									executor.awaitTermination(1, TimeUnit.DAYS);
-////									log.info("Resuming process...");
-////									
-////									executor = Executors.newFixedThreadPool(THREAD_POOL_SIZE);
-//									
-//									log.info("Reindexing tables...");
-//									wikiDAO.reindex();
-//								}
-								
-								
-								
-								
-//								
-//								WikiEntry clone = entry.clone();
-//								new WikiEntryDatabase(wikiDAO, clone).start();
-//								new WikiEntryIndexer(writer, clone).start();
-								
-//								executor.execute(new WikiEntryDatabase(wikiDAO, clone));
-//								executor.execute(new WikiEntryIndexer(writer, clone));
-								
-								
-//								WikiIndexerLucene indexer
-//								wikiDAO.insertEntry(clone);
-								
-//								if((entry.getNamespace() == WikiEntry.NAMESPACE_ARTICLE) &&
-//										(!entry.isRedirect())) {
-//////									log.info(MessageFormat.format("Indexing Wikipedia entry {0} ({1})", clone.getTitle(), clone.getId()));
-//////									WikiEntryRevision lastRevision = clone.getLastRevision();
-//////									
-//////									Document wikiDoc = new Document();
-//////									wikiDoc.add(new LongField(AbstractSamplerIndexer.INDEX_DOC_NAME_FIELD,  clone.getId(), Field.Store.YES));
-//////									wikiDoc.add(new TextField(AbstractSamplerIndexer.INDEX_CONTENTS_FIELD, lastRevision.getText(), Field.Store.YES));
-//////									
-//////									writer.addDocument(wikiDoc);
-//////									
-//									System.out.println(clone);
-//									in.close();
-//									reader.close();
-//									writer.close();
-//									
-//									return;
-//								}
+//									}
+									
+									
+								}
+								break;
 							}
-							break;
-						}
-						
+							
+							}
 						}
 					}
-					
 				}
 			}
 			
-			executor.shutdown();
-			executor.awaitTermination(1, TimeUnit.DAYS);
+//			executor.shutdown();
+//			executor.awaitTermination(1, TimeUnit.DAYS);
 			
 			log.info("Wikipedia indexing process finished successfully...");
 		}

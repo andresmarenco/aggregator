@@ -19,9 +19,11 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -136,6 +138,7 @@ import aggregator.sampler.analysis.sizeestimation.CollectionFactorEstimation;
 import aggregator.sampler.analysis.sizeestimation.SampleResample;
 import aggregator.sampler.indexer.AbstractSamplerIndexer;
 import aggregator.sampler.indexer.LuceneSamplerIndexer;
+import aggregator.sampler.indexer.MultiSamplerIndexer;
 import aggregator.sampler.indexer.WikiIndexer;
 import aggregator.sampler.indexer.WikiSplitter;
 import aggregator.sampler.output.SampledDocumentOutput;
@@ -191,9 +194,10 @@ public class Main {
 		CommonUtils.loadDefaultProperties();
 		try
 		{
-//			VerticalDAO dao = new VerticalDAO(DirectConnectionManager.getInstance());
-//			VerticalCollection collection = dao.loadVerticalCollection("FW13", true);
 			
+			VerticalDAO dao = new VerticalDAO(DirectConnectionManager.getInstance());
+			VerticalCollection collection = dao.loadVerticalCollection("FW13", true);
+//			Collections.reverse(collection.getVerticals());
 //			WikiEntry entry = new WikiEntry();
 //			entry.setId(6899);
 //			entry.setTitle("test");
@@ -205,15 +209,61 @@ public class Main {
 //			WikiDAO dao = new WikiDAO(DirectConnectionManager.getInstance());
 //			dao.insertEntry(entry);
 			
-			WikiIndexer wiki = new WikiIndexer();
-//			wiki.execute("/mnt/data/cattest");
-			wiki.execute("/mnt/data/enwiki-latest-pages-articles.xml.000");
-			wiki.execute("/mnt/data/enwiki-latest-pages-articles.xml.001");
-			wiki.execute("/mnt/data/enwiki-latest-pages-articles.xml.002");
-			wiki.execute("/mnt/data/enwiki-latest-pages-articles.xml.003");
-			wiki.execute("/mnt/data/enwiki-latest-pages-articles.xml.004");
-			wiki.execute("/mnt/data/enwiki-latest-pages-articles.xml.005");
+//			WikiIndexer wiki = new WikiIndexer();
+//			wiki.execute();
+////			wiki.execute("/mnt/data/cattest");
+//			wiki.execute("/mnt/data/enwiki-latest-pages-articles.xml.000");
+//			wiki.execute("/mnt/data/enwiki-latest-pages-articles.xml.001");
+//			wiki.execute("/mnt/data/enwiki-latest-pages-articles.xml.002");
+//			wiki.execute("/mnt/data/enwiki-latest-pages-articles.xml.003");
+//			wiki.execute("/mnt/data/enwiki-latest-pages-articles.xml.004");
+//			wiki.execute("/mnt/data/enwiki-latest-pages-articles.xml.005");
 //			
+			
+//			List<String> v = new ArrayList<String>();
+//			for(int i = 1; i<=110; i++) {
+//				v.add(MessageFormat.format("e{0}", StringUtils.leftPad(String.valueOf(i), 3, '0')));
+//			}
+//			Iterator<VerticalCollectionData> vd = collection.getVerticals().iterator();
+//			while(vd.hasNext()) {
+//				VerticalCollectionData data = vd.next();
+//				if(v.contains(data.getVerticalCollectionId())) {
+//					vd.remove();
+//				}
+//			}
+			
+//			AbstractSamplerIndexer indexer = new MultiSamplerIndexer();
+			AbstractSamplerIndexer indexer = AbstractSamplerIndexer.newInstance();
+			indexer.storeIndex(collection);
+			
+			
+//			Analyzer analyzer = new AggregatorAnalyzer(CommonUtils.LUCENE_VERSION);
+//			Path indexPath = CommonUtils.getIndexPath().resolve(AbstractSamplerIndexer.getWikiIndexName());
+//			Directory index = new NIOFSDirectory(indexPath.toFile());
+//			
+//			try(IndexReader ireader = DirectoryReader.open(index)) {
+//				IndexSearcher searcher = new IndexSearcher(ireader);
+//				
+////				System.out.println(reader.numDocs());
+//				QueryParser parser = new QueryParser(CommonUtils.LUCENE_VERSION, AbstractSamplerIndexer.INDEX_CONTENTS_FIELD, analyzer);
+//				Query query = parser.parse("inflationari tachyon labrana");
+//				
+//				
+//				ScoreDoc[] hits = searcher.search(query, 10).scoreDocs;
+//				
+//				for (int i = 0; i < hits.length; i++) {
+//					org.apache.lucene.document.Document doc = ireader.document(hits[i].doc);
+//					System.out.println("\n\n\nDOC: " + hits[i].doc + "  " + hits[i].score + "  " + doc.get(AbstractSamplerIndexer.INDEX_DOC_NAME_FIELD) + " " + doc.get(AbstractSamplerIndexer.INDEX_CONTENTS_FIELD));
+//					
+////					System.out.println(searcher.explain(query, hits[i].doc) + "\n\n\n");
+//				}
+//			}
+			
+//			try(IndexWriter writer = new IndexWriter(index, config)) {
+//			
+			
+			
+			
 			
 //			WikiSplitter splitter = new WikiSplitter();
 //			splitter.execute();
@@ -304,9 +354,6 @@ public class Main {
 			
 			
 			
-			
-//			AbstractSamplerIndexer indexer = AbstractSamplerIndexer.newInstance();
-//			indexer.storeIndex(collection);
 			
 //			try(BufferedReader reader = new BufferedReader(new FileReader("/home/andres/debug"))) {
 //				String line;

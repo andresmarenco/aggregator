@@ -233,15 +233,25 @@ public class WikiEntry {
 				switch(WikiEntry.this.getNamespace()) {
 				case NAMESPACE_ARTICLE:
 				case NAMESPACE_CATEGORY: {
-					ParsedPage parsedPage = wikiParser.parse(text);
-					for(Link category : parsedPage.getCategories()) {
-						String catText = StringUtils.substringBefore(StringUtils.substringAfter(category.getText(), ":"), "|").replaceAll("\\u00A0", " ").trim();
-						if(StringUtils.isNotEmpty(catText)) {
-							this.categories.add(catText);
+					if(StringUtils.isNotBlank(text)) {
+						ParsedPage parsedPage = wikiParser.parse(text);
+						if(parsedPage != null) {
+							for(Link category : parsedPage.getCategories()) {
+								String catText = StringUtils.substringBefore(StringUtils.substringAfter(category.getText(), ":"), "|").replaceAll("\\u00A0", " ").trim();
+								if(StringUtils.isNotEmpty(catText)) {
+									this.categories.add(catText);
+								}
+								
+								
+							}
+							
+							this.text = parsedPage.getText().replaceAll("\\u00A0", " ").replace("&nbsp;", "\n").trim();
+						} else {
+							this.text = text;
 						}
+					} else {
+						this.text = text;
 					}
-					
-					this.text = parsedPage.getText().replaceAll("\\u00A0", " ").replace("&nbsp;", "\n").trim();
 					break;
 				}
 				

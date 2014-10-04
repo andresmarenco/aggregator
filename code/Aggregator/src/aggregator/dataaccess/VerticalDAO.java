@@ -135,6 +135,7 @@ public class VerticalDAO {
 	}
 	
 	
+	
 	/**
 	 * Loads the collection and its verticals
 	 * @param collectionId Collection Id
@@ -142,14 +143,28 @@ public class VerticalDAO {
 	 * @return Collection data
 	 */
 	public VerticalCollection loadVerticalCollection(String collectionId, boolean loadVerticalData) {
+		return this.loadVerticalCollection(collectionId, AbstractSamplerIndexer.getIndexName(), loadVerticalData);
+	}
+	
+	
+	
+	/**
+	 * Loads the collection and its verticals
+	 * @param collectionId Collection Id
+	 * @param indexName Index Name
+	 * @param loadVerticalData Loads the complete vertical individual data
+	 * @return Collection data
+	 */
+	public VerticalCollection loadVerticalCollection(String collectionId, String indexName, boolean loadVerticalData) {
 		VerticalCollection result = null;
 		try(Connection connection = connectionManager.getConnection())
 		{
 			try(PreparedStatement stmt = connection.prepareStatement("select * from ir_collection where id=?;"
-							+ "select c.*, s.* from ir_vertical_by_collection as c left outer join ir_vertical_by_collection_sample as s on s.vertical_collection_id = c.id and s.collection_id = c.collection_id where c.collection_id=? order by c.id")) {
+							+ "select c.*, coalesce(s.size, 0) as size from ir_vertical_by_collection as c left outer join ir_vertical_by_collection_sample as s on s.vertical_collection_id = c.id and s.collection_id = c.collection_id and s.sample_id=? where c.collection_id=? order by c.id")) {
 				
 				stmt.setString(1, collectionId);
-				stmt.setString(2, collectionId);
+				stmt.setString(2, indexName);
+				stmt.setString(3, collectionId);
 				
 				if(stmt.execute()) {
 					try(ResultSet data = stmt.getResultSet()) {
@@ -209,7 +224,6 @@ public class VerticalDAO {
 	
 	
 	
-	
 	/**
 	 * Updates the sample size of the vertical in the collection
 	 * @param collectionId Collection ID
@@ -217,27 +231,40 @@ public class VerticalDAO {
 	 * @param sampleSize Sample size
 	 */
 	public void updateSampleSize(String collectionId, String verticalCollectionId, int sampleSize) {
+		this.updateSampleSize(collectionId, AbstractSamplerIndexer.getIndexName(), verticalCollectionId, sampleSize);
+	}
+	
+	
+	
+	
+	/**
+	 * Updates the sample size of the vertical in the collection
+	 * @param collectionId Collection ID
+	 * @param indexName Index Name
+	 * @param verticalCollectionId Vertical Collection ID
+	 * @param sampleSize Sample size
+	 */
+	public void updateSampleSize(String collectionId, String indexName, String verticalCollectionId, int sampleSize) {
 		try(Connection connection = connectionManager.getConnection()) {
-			String sampleName = AbstractSamplerIndexer.getIndexName();
 			
 			try(PreparedStatement existsStmt = connection.prepareStatement("select 1 from ir_vertical_by_collection_sample where vertical_collection_id=? and collection_id=? and sample_id=?")) {
 				existsStmt.setString(1, verticalCollectionId);
 				existsStmt.setString(2, collectionId);
-				existsStmt.setString(3, sampleName);
+				existsStmt.setString(3, indexName);
 				
 				if(existsStmt.executeQuery().next()) {
 					try(PreparedStatement stmt = connection.prepareStatement("update ir_vertical_by_collection_sample set size = ? where vertical_collection_id=? and collection_id=? and sample_id=?")) {
 						stmt.setInt(1, sampleSize);
 						stmt.setString(2, verticalCollectionId);
 						stmt.setString(3, collectionId);
-						stmt.setString(4, sampleName);
+						stmt.setString(4, indexName);
 						stmt.execute();
 					}
 				} else {
 					try(PreparedStatement stmt = connection.prepareStatement("insert into ir_vertical_by_collection_sample (vertical_collection_id,collection_id,sample_id,size) values (?,?,?,?) ")) {
 						stmt.setString(1, verticalCollectionId);
 						stmt.setString(2, collectionId);
-						stmt.setString(3, sampleName);
+						stmt.setString(3, indexName);
 						stmt.setInt(4, sampleSize);
 						stmt.execute();
 					}
